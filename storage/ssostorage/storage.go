@@ -184,7 +184,8 @@ func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 	// 这种是在authorize token的时候，会有code信息
 	if authorizeDataInfo.Code != "" {
 		// 根据之前code码，取出parent token信息
-		storeBytes, err := s.redis.GetBytes(ctx, fmt.Sprintf(s.config.storeAuthorizeKey, authorizeDataInfo.Code))
+		var storeBytes []byte
+		storeBytes, err = s.redis.GetBytes(ctx, fmt.Sprintf(s.config.storeAuthorizeKey, authorizeDataInfo.Code))
 		if err != nil {
 			err = fmt.Errorf("sso storage redis GetBytes failed, err: %w", err)
 			return
@@ -196,7 +197,6 @@ func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 			return
 		}
 		pToken = info.Ptoken
-
 		// refresh token的时候，没有该信息
 		// 1 拿到原先的sub token，看是否有效
 		// 2 再从sub token中找到对应parent token，看是否有效
