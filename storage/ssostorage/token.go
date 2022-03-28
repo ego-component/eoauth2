@@ -68,7 +68,7 @@ func (t *tokenServer) getAccess(ctx context.Context, token string) (storeData *a
 	return t.subToken.getAccess(ctx, token)
 }
 
-func (t *tokenServer) removeToken(ctx context.Context, token string) (int64, error) {
+func (t *tokenServer) removeToken(ctx context.Context, token string) (bool, error) {
 	return t.subToken.removeToken(ctx, token)
 }
 
