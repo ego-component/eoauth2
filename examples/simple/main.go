@@ -131,13 +131,13 @@ func main() {
 			w.Write([]byte(fmt.Sprintf("FULL RESULT: %+v<br/>\n", jr)))
 
 			// output links
-			w.Write([]byte(fmt.Sprintf("<a href=\"%s\">Goto Token URL</a><br/>", aurl)))
+			w.Write([]byte(fmt.Sprintf("<a href=\"%s\">Goto ParentToken URL</a><br/>", aurl)))
 
 			cururl := *r.URL
 			curq := cururl.Query()
 			curq.Add("doparse", "1")
 			cururl.RawQuery = curq.Encode()
-			w.Write([]byte(fmt.Sprintf("<a href=\"%s\">Download Token</a><br/>", cururl.String())))
+			w.Write([]byte(fmt.Sprintf("<a href=\"%s\">Download ParentToken</a><br/>", cururl.String())))
 			return
 		})
 

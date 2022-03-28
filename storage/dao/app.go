@@ -2,8 +2,10 @@ package dao
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gotomicro/ego-component/egorm"
+	"gorm.io/gorm"
 )
 
 type App struct {
@@ -30,6 +32,17 @@ func GetAppInfoByClientId(db *egorm.Component, clientId string) (resp App, err e
 	if err = db.Where("client_id = ? and dtime = 0", clientId).First(&resp).Error; err != nil {
 		err = fmt.Errorf("GetAppInfoByClientId failed, err: %w", err)
 		return
+	}
+	return
+}
+
+// CreateApp insert a new App into database and returns
+// last inserted Id on success.
+func CreateApp(db *gorm.DB, data *App) (err error) {
+	data.Ctime = time.Now().Unix()
+	data.Utime = time.Now().Unix()
+	if err = db.Create(data).Error; err != nil {
+		return fmt.Errorf("CreateApp failed, err:%w", err)
 	}
 	return
 }

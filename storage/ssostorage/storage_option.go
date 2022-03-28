@@ -1,4 +1,4 @@
-package redisstorage
+package ssostorage
 
 type Option func(c *Storage)
 

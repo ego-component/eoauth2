@@ -1,4 +1,4 @@
-package redisstorage
+package ssostorage
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 	"github.com/gotomicro/ego-component/eredis"
 	"github.com/gotomicro/ego/core/elog"
 	"github.com/spf13/cast"
-	"gorm.io/gorm"
 )
 
 type Storage struct {
@@ -21,6 +20,7 @@ type Storage struct {
 	logger      *elog.Component
 	tokenServer *tokenServer
 	config      *config
+	redis       *eredis.Component
 }
 
 // NewStorage returns a new redis Storage instance.
@@ -35,6 +35,7 @@ func NewStorage(db *egorm.Component, redis *eredis.Component, logger *elog.Compo
 	}
 	tSrv := initTokenServer(container.config, redis)
 	container.tokenServer = tSrv
+	container.redis = redis
 	return container
 }
 
@@ -50,25 +51,52 @@ func (s *Storage) Clone() server.Storage {
 func (s *Storage) Close() {
 }
 
-// GetClient loads the client by id
-func (s *Storage) GetClient(ctx context.Context, clientId string) (client server.Client, err error) {
-	app, err := dao.GetAppInfoByClientId(s.db.WithContext(ctx), clientId)
+// CreateClient create client
+func (s *Storage) CreateClient(ctx context.Context, app *dao.App) (err error) {
+	err = dao.CreateApp(s.db.WithContext(ctx), app)
 	if err != nil {
-		return
+		return fmt.Errorf("sso storage CreateClient failed, err: %w", err)
 	}
-	c := server.DefaultClient{
+	client := &clientInfo{
 		Id:          app.ClientId,
 		Secret:      app.Secret,
 		RedirectUri: app.RedirectUri,
 	}
-	return &c, nil
+	err = s.redis.HSet(ctx, s.config.storeClientInfoKey, app.ClientId, client.Marshal())
+	if err != nil {
+		return fmt.Errorf("sso storage CreateClient failed2, err: %w", err)
+	}
+	return nil
+}
+
+// GetClient loads the client by id
+func (s *Storage) GetClient(ctx context.Context, clientId string) (c server.Client, err error) {
+	infoBytes, err := s.redis.Client().HGet(ctx, s.config.storeClientInfoKey, clientId).Bytes()
+	if err != nil {
+		err = fmt.Errorf("sso storage GetClient redis get failed, err: %w", err)
+		return
+	}
+	client := &clientInfo{}
+	err = client.Unmarshal(infoBytes)
+	if err != nil {
+		err = fmt.Errorf("sso storage GetClient unmarshal failed, err: %w", err)
+		return
+	}
+	info := server.DefaultClient{
+		Id:          client.Id,
+		Secret:      client.Secret,
+		RedirectUri: client.RedirectUri,
+	}
+	return &info, nil
 }
 
 // SaveAuthorize saves authorize data.
+// 单点登录，会多出一个parent token
 func (s *Storage) SaveAuthorize(ctx context.Context, data *server.AuthorizeData) (err error) {
-	obj := dao.Authorize{
-		Client:      data.Client.GetId(),
+	store := &authorizeData{
+		ClientId:    data.Client.GetId(),
 		Code:        data.Code,
+		Ptoken:      data.SsoData.ParentToken.Token,
 		ExpiresIn:   data.ExpiresIn,
 		Scope:       data.Scope,
 		RedirectUri: data.RedirectUri,
@@ -76,19 +104,17 @@ func (s *Storage) SaveAuthorize(ctx context.Context, data *server.AuthorizeData)
 		Ctime:       data.CreatedAt.Unix(),
 		Extra:       cast.ToString(data.UserData),
 	}
-	tx := s.db.WithContext(ctx).Begin()
-	err = dao.CreateAuthorize(tx, &obj)
+	err = s.redis.SetEX(ctx, fmt.Sprintf(s.config.storeAuthorizeKey, data.Code), store.Marshal(), time.Duration(data.ExpiresIn)*time.Second)
 	if err != nil {
-		tx.Rollback()
+		err = fmt.Errorf("sso storage SaveAuthorize failed, err: %w", err)
 		return
 	}
-
-	err = s.addExpireAtData(tx, data.Code, data.ExpireAt(), data.ParentToken)
+	// 创建父级Token
+	err = s.tokenServer.createParentToken(ctx, data.SsoData.ParentToken, data.SsoData.Uid, data.SsoData.Platform)
 	if err != nil {
-		tx.Rollback()
+		err = fmt.Errorf("sso storage SaveAuthorize createParentToken failed, err: %w", err)
 		return
 	}
-	tx.Commit()
 	return
 }
 
@@ -97,12 +123,17 @@ func (s *Storage) SaveAuthorize(ctx context.Context, data *server.AuthorizeData)
 // Optionally can return error if expired.
 func (s *Storage) LoadAuthorize(ctx context.Context, code string) (*server.AuthorizeData, error) {
 	var data server.AuthorizeData
-
-	info, err := dao.GetAuthorizeInfoByCode(s.db.WithContext(ctx), code)
+	storeBytes, err := s.redis.GetBytes(ctx, fmt.Sprintf(s.config.storeAuthorizeKey, code))
 	if err != nil {
+		err = fmt.Errorf("sso storage LoadAuthorize redis get failed, err: %w", err)
 		return nil, err
 	}
-
+	info := &authorizeData{}
+	err = info.Unmarshal(storeBytes)
+	if err != nil {
+		err = fmt.Errorf("sso storage LoadAuthorize unmarshal failed, err: %w", err)
+		return nil, err
+	}
 	data = server.AuthorizeData{
 		Code:        info.Code,
 		ExpiresIn:   info.ExpiresIn,
@@ -112,28 +143,20 @@ func (s *Storage) LoadAuthorize(ctx context.Context, code string) (*server.Autho
 		CreatedAt:   time.Unix(info.Ctime, 0),
 		UserData:    info.Extra,
 	}
-	c, err := s.GetClient(ctx, info.Client)
+	c, err := s.GetClient(ctx, info.ClientId)
 	if err != nil {
 		return nil, err
 	}
-
-	if data.ExpireAt().Before(time.Now()) {
-		return nil, fmt.Errorf("Token expired at %s.", data.ExpireAt().String())
-	}
-
 	data.Client = c
 	return &data, nil
 }
 
 // RemoveAuthorize revokes or deletes the authorization code.
 func (s *Storage) RemoveAuthorize(ctx context.Context, code string) (err error) {
-	err = dao.DeleteAuthorizeByCode(s.db.WithContext(ctx), code)
+	_, err = s.redis.Del(ctx, fmt.Sprintf(s.config.storeAuthorizeKey, code))
 	if err != nil {
+		err = fmt.Errorf("sso storage RemoveAuthorize failed, err: %w", err)
 		return
-	}
-
-	if err = s.removeExpireAtData(ctx, code); err != nil {
-		return err
 	}
 	return nil
 }
@@ -142,7 +165,7 @@ func (s *Storage) RemoveAuthorize(ctx context.Context, code string) (err error) 
 // If RefreshToken is not blank, it must save in a way that can be loaded using LoadRefresh.
 func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err error) {
 	prevToken := ""
-	authorizeData := &server.AuthorizeData{}
+	authorizeDataInfo := &server.AuthorizeData{}
 
 	// 之前的access token
 	// 如果是authorize token，那么该数据为空
@@ -154,22 +177,26 @@ func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 	// 如果是authorize token，有这个数据
 	// 如果是refresh token，那么该数据为空
 	if data.AuthorizeData != nil {
-		authorizeData = data.AuthorizeData
+		authorizeDataInfo = data.AuthorizeData
 	}
-
-	extra := cast.ToString(data.UserData)
-
-	tx := s.db.WithContext(ctx).Begin()
 
 	pToken := ""
 	// 这种是在authorize token的时候，会有code信息
-	if authorizeData.Code != "" {
+	if authorizeDataInfo.Code != "" {
 		// 根据之前code码，取出parent token信息
-		expires, err := dao.GetExpireInfoByToken(s.db.WithContext(ctx), authorizeData.Code)
+		storeBytes, err := s.redis.GetBytes(ctx, fmt.Sprintf(s.config.storeAuthorizeKey, authorizeDataInfo.Code))
 		if err != nil {
-			return fmt.Errorf("pToken not found1, err: %w", err)
+			err = fmt.Errorf("sso storage redis GetBytes failed, err: %w", err)
+			return
 		}
-		pToken = expires.Ptoken
+		info := &authorizeData{}
+		err = info.Unmarshal(storeBytes)
+		if err != nil {
+			err = fmt.Errorf("sso storage SaveAccess unmarshal failed, err: %w", err)
+			return
+		}
+		pToken = info.Ptoken
+
 		// refresh token的时候，没有该信息
 		// 1 拿到原先的sub token，看是否有效
 		// 2 再从sub token中找到对应parent token，看是否有效
@@ -190,50 +217,27 @@ func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 		return errors.New("data.Client must not be nil")
 	}
 
-	obj := dao.Access{
-		Client:       data.Client.GetId(),
-		Authorize:    authorizeData.Code,
-		Previous:     prevToken,
-		AccessToken:  data.AccessToken,
-		RefreshToken: data.RefreshToken,
-		ExpiresIn:    int(data.ExpiresIn),
-		Scope:        data.Scope,
-		RedirectUri:  data.RedirectUri,
-		Ctime:        data.CreatedAt.Unix(),
-		Extra:        extra,
+	storeData := &accessData{
+		ClientId: data.Client.GetId(),
+		//Authorize:    authorizeDataInfo.Code,
+		Previous:    prevToken,
+		AccessToken: data.AccessToken,
+		//RefreshToken: data.RefreshToken,
+		ExpiresIn:   data.ExpiresIn,
+		Scope:       data.Scope,
+		RedirectUri: data.RedirectUri,
+		Ctime:       data.CreatedAt.Unix(),
 	}
 
-	err = dao.CreateAccess(tx, &obj)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	_, err = dao.GetAppInfoByClientId(tx, data.Client.GetId())
-	if err != nil {
-		tx.Rollback()
-		return
-	}
-
-	err = tx.Model(dao.App{}).Where("client_id = ?", data.Client.GetId()).Updates(map[string]interface{}{
-		"call_no": gorm.Expr("call_no+?", 1),
-	}).Error
-	if err != nil {
-		tx.Rollback()
-		return
-	}
-
+	// 单点登录下，refresh token，其实可以不需要，因为
 	err = s.tokenServer.createToken(ctx, data.Client.GetId(), dto.Token{
 		Token:     data.AccessToken,
 		AuthAt:    time.Now().Unix(),
 		ExpiresIn: s.config.parentAccessExpiration,
-	}, pToken)
+	}, pToken, storeData)
 	if err != nil {
-		tx.Rollback()
 		return fmt.Errorf("设置redis token失败, err:%w", err)
 	}
-
-	tx.Commit()
 	return nil
 }
 
@@ -242,20 +246,18 @@ func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 // Optionally can return error if expired.
 func (s *Storage) LoadAccess(ctx context.Context, token string) (*server.AccessData, error) {
 	var result server.AccessData
-
-	info, err := dao.GetAccessByAccessToken(s.db.WithContext(ctx), token)
+	info, err := s.tokenServer.getAccess(ctx, token)
 	if err != nil {
 		return nil, err
 	}
 
 	result.AccessToken = info.AccessToken
-	result.RefreshToken = info.RefreshToken
-	result.ExpiresIn = int32(info.ExpiresIn)
+	//result.RefreshToken = info.RefreshToken
+	result.ExpiresIn = info.ExpiresIn
 	result.Scope = info.Scope
 	result.RedirectUri = info.RedirectUri
 	result.CreatedAt = time.Unix(info.Ctime, 0)
-	result.UserData = info.Extra
-	client, err := s.GetClient(ctx, info.Client)
+	client, err := s.GetClient(ctx, info.ClientId)
 	if err != nil {
 		return nil, err
 	}
@@ -264,40 +266,14 @@ func (s *Storage) LoadAccess(ctx context.Context, token string) (*server.AccessD
 }
 
 // RemoveAccess revokes or deletes an AccessData.
+// 用于删除上一个token信息
 func (s *Storage) RemoveAccess(ctx context.Context, token string) (err error) {
-	err = dao.DeleteAccessByAccessToken(s.db.WithContext(ctx), token)
-	if err != nil {
-		return
-	}
-	err = s.removeExpireAtData(ctx, token)
-	if err != nil {
-		return
-	}
-
-	// todo 应该移除子节点token，在这里设置expire sub token
-	// 不能删除parent token
-
-	//pToken, err := s.tokenServer.getParentTokenByToken(ctx, token)
-	//if err != nil {
-	//	return err
-	//}
-
-	// 删除redis token
-	//s.tokenServer.removeParentToken(ctx, pToken)
+	s.tokenServer.removeToken(ctx, token)
 	return
 }
 
 // RemoveAllAccess 通过token，删除自己的token，以及父token
 func (s *Storage) RemoveAllAccess(ctx context.Context, token string) (err error) {
-	err = dao.DeleteAccessByAccessToken(s.db.WithContext(ctx), token)
-	if err != nil {
-		return
-	}
-	err = s.removeExpireAtData(ctx, token)
-	if err != nil {
-		return
-	}
-
 	pToken, err := s.tokenServer.getParentTokenByToken(ctx, token)
 	if err != nil {
 		return err
@@ -325,46 +301,10 @@ func (s *Storage) RemoveRefresh(ctx context.Context, code string) (err error) {
 	return
 }
 
-// CreateClientWithInformation Makes easy to create a osin.DefaultClient
-func (s *Storage) CreateClientWithInformation(id string, secret string, redirectURI string, userData interface{}) server.Client {
-	return &server.DefaultClient{
-		Id:          id,
-		Secret:      secret,
-		RedirectUri: redirectURI,
-		UserData:    userData,
-	}
-}
-
-func (s *Storage) saveRefresh(tx *gorm.DB, refresh, access string) (err error) {
-	obj := dao.Refresh{
-		Token:  refresh,
-		Access: access,
-	}
-
-	err = dao.CreateRefreash(tx, &obj)
-	return
-}
-
-// addExpireAtData add info in expires table
-func (s *Storage) addExpireAtData(tx *gorm.DB, code string, expireAt time.Time, parentToken string) (err error) {
-	obj := dao.Expires{
-		Token:     code,
-		ExpiresAt: expireAt.Unix(),
-		Ptoken:    parentToken,
-	}
-	err = dao.CreateExpires(tx, &obj)
-	return
-}
-
 // removeExpireAtData remove info in expires table
 func (s *Storage) removeExpireAtData(ctx context.Context, code string) (err error) {
 	err = dao.DeleteExpiresByToken(s.db.WithContext(ctx), code)
 	return
-}
-
-// CreateParentToken 创建父级token
-func (s *Storage) CreateParentToken(ctx context.Context, pToken dto.Token, uid int64, platform string) (err error) {
-	return s.tokenServer.createParentToken(ctx, pToken, uid, platform)
 }
 
 // RenewParentToken 续期父级token
@@ -380,15 +320,6 @@ func (s *Storage) RemoveParentToken(ctx context.Context, pToken string) (err err
 	return s.tokenServer.removeParentToken(ctx, pToken)
 }
 
-// CreateToken 创建子系统token
-func (s *Storage) CreateToken(ctx context.Context, clientId string, token dto.Token, pToken string) (err error) {
-	return s.tokenServer.createToken(ctx, clientId, token, pToken)
-}
-
 func (s *Storage) GetUidByToken(ctx context.Context, token string) (uid int64, err error) {
 	return s.tokenServer.getUidByToken(ctx, token)
-}
-
-func (s *Storage) RefreshToken(ctx context.Context, clientId string, pToken string) (tk *dto.Token, err error) {
-	return s.tokenServer.refreshToken(ctx, clientId, pToken)
 }

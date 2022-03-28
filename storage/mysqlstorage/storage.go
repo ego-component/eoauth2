@@ -110,7 +110,7 @@ func (s *storage) LoadAuthorize(ctx context.Context, code string) (*server.Autho
 	}
 
 	if data.ExpireAt().Before(time.Now()) {
-		return nil, fmt.Errorf("Token expired at %s.", data.ExpireAt().String())
+		return nil, fmt.Errorf("ParentToken expired at %s.", data.ExpireAt().String())
 	}
 
 	data.Client = c

@@ -30,7 +30,7 @@ type AuthorizeRequest struct {
 	authorized  bool        // Set if request is authorized
 	redirectUri string
 
-	// Token expiration in seconds. Change if different from default.
+	// ParentToken expiration in seconds. Change if different from default.
 	// If type = TOKEN, this expiration will be for the ACCESS token.
 	Expiration int32
 
@@ -43,14 +43,14 @@ type AuthorizeRequest struct {
 	accessTokenGen    AccessTokenGen
 	authorizeTokenGen AuthorizeTokenGen
 	config            *Config
-	ParentToken       string // 可选项，用于单点登录
+	ssoData           SsoData // 可选项，单点登录信息
 }
 
 // AuthorizeData ...
 type AuthorizeData struct {
 	Client              Client      // Client information
 	Code                string      // Authorization code
-	ExpiresIn           int32       // Token expiration in seconds
+	ExpiresIn           int32       // ParentToken expiration in seconds
 	Scope               string      // Requested scope
 	RedirectUri         string      // Redirect Uri from request
 	State               string      // State data from request
@@ -61,7 +61,7 @@ type AuthorizeData struct {
 	*Context
 	storage           Storage
 	authorizeTokenGen AuthorizeTokenGen
-	ParentToken       string // 如果存在parent token，赋值
+	SsoData           SsoData // 单点登录信息
 }
 
 // IsExpired is true if authorization expired

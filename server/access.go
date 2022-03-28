@@ -40,7 +40,7 @@ type AccessRequest struct {
 	Assertion       string
 	authorized      bool        // Set if request is authorized
 	userData        interface{} // Data to be passed to storage. Not used by the library.
-	Expiration      int32       // Token expiration in seconds. Change if different from default
+	Expiration      int32       // ParentToken expiration in seconds. Change if different from default
 
 	// Set if a refresh token should be generated
 	GenerateRefresh bool
@@ -321,10 +321,10 @@ type AccessData struct {
 	// Access token
 	AccessToken string
 
-	// Refresh Token. Can be blank
+	// Refresh ParentToken. Can be blank
 	RefreshToken string
 
-	// Token expiration in seconds
+	// ParentToken expiration in seconds
 	ExpiresIn int32
 
 	// Requested scope

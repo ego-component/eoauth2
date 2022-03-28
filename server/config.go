@@ -7,7 +7,7 @@ type Config struct {
 	EnableAccessInterceptor bool                  // 是否开启，记录请求数据
 	AuthorizationExpiration int32                 // Authorization token expiration in seconds (default 5 minutes)
 	AccessExpiration        int32                 // Access token expiration in seconds (default 1 hour)
-	TokenType               string                // Token type to return
+	TokenType               string                // ParentToken type to return
 	AllowedAuthorizeTypes   AllowedAuthorizeTypes // List of allowed authorize types (only CODE by default)
 	AllowedAccessTypes      AllowedAccessTypes    // List of allowed access types (only AUTHORIZATION_CODE by default)
 	// HTTP status code to return for errors - default 200

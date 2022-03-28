@@ -1,4 +1,4 @@
-package redisstorage
+package ssostorage
 
 import (
 	"context"
@@ -52,15 +52,19 @@ type config struct {
 		ttl: 3600
 	*/
 	subTokenMapParentTokenKey string // token与父级token的映射关系
+	storeClientInfoKey        string // 存储sso client的信息
+	storeAuthorizeKey         string // 存储sso authorize的信息
 	//clientType                []string // 支持的客户端类型，web、andorid、ios，用于设置一个客户端，可以登录几个parent token。
 }
 
 func defaultConfig() *config {
 	return &config{
-		uidMapParentTokenKey:      "sso:uid:%d", // uid map parent token type
-		uidMapParentTokenFieldKey: "%s|%s",      // uid map parent token type
-		parentTokenMapSubTokenKey: "sso:ptk:%s", //  parent token map
-		subTokenMapParentTokenKey: "sso:stk:%s", // sub token map parent token
+		uidMapParentTokenKey:      "sso:uid:%d",  // uid map parent token type
+		uidMapParentTokenFieldKey: "%s|%s",       // uid map parent token type
+		parentTokenMapSubTokenKey: "sso:ptk:%s",  //  parent token map
+		subTokenMapParentTokenKey: "sso:stk:%s",  // sub token map parent token
+		storeClientInfoKey:        "sso:client",  // sso的client信息，使用hash map
+		storeAuthorizeKey:         "sso:auth:%s", // 存储auth信息
 		parentAccessExpiration:    24 * 3600,
 		//platform:                []string{"web", "android", "ios"},
 	}
@@ -72,6 +76,7 @@ type subToken struct {
 	hashKeyClientId    string
 	hashKeyTokenInfo   string
 	hashKeyCtime       string
+	hashKeyAccessInfo  string
 	redis              *eredis.Component
 }
 
@@ -82,6 +87,7 @@ func newSubToken(config *config, redis *eredis.Component) *subToken {
 		hashKeyParentToken: "_pt",
 		hashKeyClientId:    "_id",
 		hashKeyTokenInfo:   "_t",
+		hashKeyAccessInfo:  "_a",
 		redis:              redis,
 	}
 }
@@ -90,16 +96,32 @@ func (s *subToken) getKey(subToken string) string {
 	return fmt.Sprintf(s.config.subTokenMapParentTokenKey, subToken)
 }
 
-func (s *subToken) create(ctx context.Context, token dto.Token, parentToken string, clientId string) error {
+func (s *subToken) create(ctx context.Context, token dto.Token, parentToken string, clientId string, storeData *accessData) error {
 	err := s.redis.HMSet(ctx, s.getKey(token.Token), map[string]interface{}{
 		s.hashKeyParentToken: parentToken,
 		s.hashKeyClientId:    clientId,
 		s.hashKeyCtime:       time.Now().Unix(),
+		s.hashKeyAccessInfo:  storeData.Marshal(),
 	}, time.Duration(token.ExpiresIn)*time.Second)
 	if err != nil {
 		return fmt.Errorf("subToken.create token failed, err:%w", err)
 	}
 	return nil
+}
+
+func (s *subToken) getAccess(ctx context.Context, token string) (storeData *accessData, err error) {
+	infoBytes, err := s.redis.Client().HGet(ctx, s.getKey(token), s.hashKeyAccessInfo).Bytes()
+	info := &accessData{}
+	err = info.Unmarshal(infoBytes)
+	if err != nil {
+		err = fmt.Errorf("subToken getAccess json unmarshal failed, err: %w", err)
+		return
+	}
+	return info, nil
+}
+
+func (s *subToken) removeToken(ctx context.Context, token string) (int64, error) {
+	return s.redis.Del(ctx, s.getKey(token))
 }
 
 // 通过子系统token，获得父节点token
@@ -246,7 +268,7 @@ func (u *uidMapParentToken) getExpireTime(ctx context.Context, uid int64) (expir
 	return
 }
 
-//func (u *uidMapParentToken) getParentToken(ctx context.Context, uid int64, clientType string) (resp dto.Token, err error) {
+//func (u *uidMapParentToken) getParentToken(ctx context.Context, uid int64, clientType string) (resp dto.ParentToken, err error) {
 //	value, err := u.redis.HGet(ctx, u.getKey(uid), clientType)
 //	if err != nil {
 //		err = fmt.Errorf("uidMapParentToken.getParentToken failed, err: %w", err)
@@ -325,7 +347,7 @@ func (p *parentToken) setToken(ctx context.Context, pToken string, clientId stri
 	if err != nil {
 		return err
 	}
-	// 如果不存在key，报错
+	// 因为authorize阶段创建了parent token，所以如果不存在parent token key是有问题的，需要报错
 	_, err = p.redis.HGet(ctx, p.getKey(pToken), p.hashKeyCtime)
 	if err != nil {
 		return fmt.Errorf("parentToken.createToken get key empty, err: %w", err)
