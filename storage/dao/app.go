@@ -16,7 +16,7 @@ type App struct {
 	RedirectUri string `gorm:"not null;default:'';comment:跳转地址" json:"redirectUri"` // 跳转地址
 	Url         string `gorm:"not null;default:'';comment:访问地址" json:"url"`         // 访问地址
 	Extra       string `gorm:"not null;type:longtext;comment:额外信息" json:"extra"`    // 额外信息
-	CntCall     int    `gorm:"not null;default:'';comment:调用次数" json:"cntCall"`     // 调用次数
+	CntCall     int    `gorm:"not null;default:0;comment:调用次数" json:"cntCall"`      // 调用次数
 	State       int    `gorm:"not null;default:0;comment:状态" json:"state"`          // 状态
 	Ctime       int64  `gorm:"not null;default:0;comment:创建时间" json:"ctime"`        // 创建时间
 	Utime       int64  `gorm:"not null;default:0;comment:更新时间" json:"utime"`        // 更新时间
