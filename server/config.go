@@ -14,7 +14,7 @@ type Config struct {
 	// Only used if response was created from server
 	ErrorStatusCode int
 	// If true allows client secret also in params, else only in
-	// Authorization header - default false
+	// Authorization header - default true
 	AllowClientSecretInParams bool
 	// If true allows access request using GET, else only POST - default false
 	AllowGetAccessRequest bool
