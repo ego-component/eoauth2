@@ -297,13 +297,7 @@ func (s *Storage) LoadRefresh(ctx context.Context, token string) (*server.Access
 
 // RemoveRefresh revokes or deletes refresh AccessData.
 func (s *Storage) RemoveRefresh(ctx context.Context, code string) (err error) {
-	err = dao.DeleteRefreshByToken(s.db.WithContext(ctx), code)
-	return
-}
-
-// removeExpireAtData remove info in expires table
-func (s *Storage) removeExpireAtData(ctx context.Context, code string) (err error) {
-	err = dao.DeleteExpiresByToken(s.db.WithContext(ctx), code)
+	//err = dao.DeleteRefreshByToken(s.db.WithContext(ctx), code)
 	return
 }
 
