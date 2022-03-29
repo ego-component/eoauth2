@@ -13,6 +13,8 @@ require (
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/zap v1.17.0
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
+	google.golang.org/grpc v1.42.0
+	google.golang.org/protobuf v1.27.1
 	gorm.io/gorm v1.21.3
 )
 
@@ -64,6 +66,7 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/shirou/gopsutil v3.21.3+incompatible // indirect
 	github.com/shirou/gopsutil/v3 v3.21.6 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
@@ -85,8 +88,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/genproto v0.0.0-20210708141623-e76da96a951f // indirect
-	google.golang.org/grpc v1.42.0 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	gorm.io/driver/mysql v1.0.5 // indirect

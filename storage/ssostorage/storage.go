@@ -24,10 +24,10 @@ type Storage struct {
 }
 
 // NewStorage returns a new redis Storage instance.
-func NewStorage(db *egorm.Component, redis *eredis.Component, logger *elog.Component, options ...Option) *Storage {
+func NewStorage(db *egorm.Component, redis *eredis.Component, options ...Option) *Storage {
 	container := &Storage{
 		db:     db,
-		logger: logger,
+		logger: elog.EgoLogger.With(elog.FieldComponent("oauth2.storage")),
 		config: defaultConfig(),
 	}
 	for _, option := range options {

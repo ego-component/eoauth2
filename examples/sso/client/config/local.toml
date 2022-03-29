@@ -1,0 +1,15 @@
+[server.http]
+port = 29001
+
+[oauth]
+# sso 的地址
+addr = "127.0.0.1:19002"
+clientId = "1234"
+clientSecret = "5678"
+authURL = "http://localhost:19001/authorize" # sso 登录地址
+logoutURL = "http://localhost:19001/oauth/logout" # sso 退出地址
+redirectURL = "http://localhost:29001/oauth/code" # 客户端 授权地址
+Domain = "localhost"
+StateCookieName = "sso_state"
+TokenCookieName = "ego_sso_token"
+

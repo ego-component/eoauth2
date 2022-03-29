@@ -1,0 +1,16 @@
+[server.http]
+port = 19001
+[server.grpc]
+port = 19002
+[mysql]
+connMaxLifetime = "300s"
+dsn = "root:root@tcp(127.0.0.1:3306)/test_sso?charset=utf8mb4&collation=utf8mb4_general_ci&parseTime=True&loc=Local&timeout=1s&readTimeout=3s&writeTimeout=3s"
+level = "panic"
+maxIdleConns = 50
+maxOpenConns = 100
+[redis]
+addr = "127.0.0.1:6379"
+[client]
+codeUrl="http://localhost:29001/oauth/code"
+
+[sso]

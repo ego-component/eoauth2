@@ -16,7 +16,7 @@ type Container struct {
 func DefaultContainer() *Container {
 	return &Container{
 		Config: DefaultConfig(),
-		logger: elog.EgoLogger.With(elog.FieldComponent("component.eoauth2.server")),
+		logger: elog.EgoLogger.With(elog.FieldComponent("eoauth2.client")),
 	}
 }
 
