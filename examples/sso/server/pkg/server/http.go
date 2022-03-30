@@ -80,6 +80,7 @@ func checkToken() gin.HandlerFunc {
 		})
 		if ar.IsError() {
 			ctx.JSON(401, ar.GetAllOutput())
+			ctx.Abort()
 			return
 		}
 
@@ -112,6 +113,7 @@ func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
 
 	if err != nil {
 		c.JSON(401, err.Error())
+		c.Abort()
 		return
 	}
 
@@ -119,6 +121,7 @@ func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
 	redirectUri, err := ar.GetRedirectUrl()
 	if err != nil {
 		c.JSON(401, "获取重定向地址失败")
+		c.Abort()
 		return
 	}
 

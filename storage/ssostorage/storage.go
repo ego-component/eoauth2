@@ -9,6 +9,7 @@ import (
 	"github.com/ego-component/eoauth2/server"
 	"github.com/ego-component/eoauth2/storage/dao"
 	"github.com/ego-component/eoauth2/storage/dto"
+	"github.com/go-redis/redis/v8"
 	"github.com/gotomicro/ego-component/egorm"
 	"github.com/gotomicro/ego-component/eredis"
 	"github.com/gotomicro/ego/core/elog"
@@ -72,10 +73,16 @@ func (s *Storage) CreateClient(ctx context.Context, app *dao.App) (err error) {
 // GetClient loads the client by id
 func (s *Storage) GetClient(ctx context.Context, clientId string) (c server.Client, err error) {
 	infoBytes, err := s.redis.Client().HGet(ctx, s.config.storeClientInfoKey, clientId).Bytes()
-	if err != nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		err = fmt.Errorf("sso storage GetClient redis get failed, err: %w", err)
 		return
 	}
+
+	if errors.Is(err, redis.Nil) {
+		err = fmt.Errorf("redis not found,err: %w", server.ErrNotFound)
+		return
+	}
+
 	client := &clientInfo{}
 	err = client.Unmarshal(infoBytes)
 	if err != nil {

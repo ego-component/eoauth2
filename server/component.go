@@ -56,6 +56,11 @@ func (c *Component) HandleAuthorizeRequest(ctx context.Context, param AuthorizeR
 		c.logger.Info("HandleAuthorizeRequest access", elog.FieldCtxTid(ctx), elog.FieldValueAny(param))
 	}
 
+	if param.ClientId == "" {
+		ret.setError(E_UNAUTHORIZED_CLIENT, fmt.Errorf("client is empty"), "HandleAuthorizeRequest", "client is empty")
+		return ret
+	}
+
 	ret.Context.SetOutput("state", param.State)
 
 	// create the authorization request
@@ -69,7 +74,7 @@ func (c *Component) HandleAuthorizeRequest(ctx context.Context, param AuthorizeR
 
 	// must have a valid client
 	ret.Client, err = ret.storage.GetClient(ctx, param.ClientId)
-	if err == ErrNotFound {
+	if errors.Is(err, ErrNotFound) {
 		ret.setError(E_UNAUTHORIZED_CLIENT, err, "HandleAuthorizeRequest", "client not found")
 		return ret
 	}
@@ -152,7 +157,7 @@ func (c *Component) HandleAuthorizeRequest(ctx context.Context, param AuthorizeR
 func (r *AuthorizeRequest) Build(options ...AuthorizeRequestOption) error {
 	// don't process if is already an error
 	if r.IsError() {
-		return fmt.Errorf("Build error1, err %w", r.responseErr)
+		return fmt.Errorf("AuthorizeRequestBuild error, err %w", r.responseErr)
 	}
 
 	for _, option := range options {
