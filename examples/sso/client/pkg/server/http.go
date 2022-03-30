@@ -207,6 +207,7 @@ func checkToken() gin.HandlerFunc {
 			Avatar:   userByToken.Avatar,
 			Email:    userByToken.Email,
 		}
+		ctx.Request = ctx.Request.WithContext(context.WithValue(ctx.Request.Context(), "x-ego-uid", userByToken.Uid))
 		ctx.Set(AuthKey, user)
 		ctx.Next()
 	}

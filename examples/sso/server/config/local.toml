@@ -11,6 +11,10 @@ maxOpenConns = 100
 [redis]
 addr = "127.0.0.1:6379"
 [client]
-codeUrl="http://localhost:29001/oauth/code"
+codeUrl = "http://localhost:29001/oauth/code"
 
 [sso]
+tokenDomain = "localhost"
+tokenSecure = false
+tokenCookieName = "ego_ptoken"
+

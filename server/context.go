@@ -95,7 +95,7 @@ func (c *Context) IsError() bool {
 
 // setError sets an error id, description, and state on the Response
 // uri is left blank
-func (c *Context) setError(responseError string, internalError error, debugFormat string, debugArgs ...interface{}) {
+func (c *Context) setError(responseError string, internalError error, method string, description string) {
 	// set error parameters
 	c.isError = true
 	c.responseErr = fmt.Errorf(responseError)
@@ -110,7 +110,7 @@ func (c *Context) setError(responseError string, internalError error, debugForma
 	c.output = make(ResponseData) // clear output
 	c.output["error"] = c.responseErr.Error()
 	c.output["state"] = state
-	c.logger.Error("set error", zap.Any("internalErr", c.internalErr), zap.String("errDescription", fmt.Sprintf(debugFormat, debugArgs)))
+	c.logger.Error("eoauth2_error", elog.FieldErr(c.internalErr), elog.FieldMethod(method), zap.String("description", description))
 }
 
 func (c *Context) setRedirectFragment(f bool) {

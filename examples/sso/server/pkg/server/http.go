@@ -8,6 +8,7 @@ import (
 	"github.com/ego-component/eoauth2/server"
 	oauth2dto "github.com/ego-component/eoauth2/storage/dto"
 	"github.com/gin-gonic/gin"
+	"github.com/gotomicro/ego/core/econf"
 	"github.com/gotomicro/ego/server/egin"
 )
 
@@ -29,7 +30,7 @@ type ReqToken struct {
 
 func ServeHttp() *egin.Component {
 	router := egin.Load("server.http").Build()
-	router.Any("/authorize", func(c *gin.Context) {
+	router.Any("/authorize", checkToken(), func(c *gin.Context) {
 		reqView := ReqOauthLogin{}
 		err := c.Bind(&reqView)
 		if err != nil {
@@ -51,33 +52,79 @@ func ServeHttp() *egin.Component {
 		if !HandleLoginPage(ar, c.Writer, c.Request) {
 			return
 		}
-		accessToken := oauth2dto.NewToken(86400 * 7)
 
-		err = ar.Build(
-			server.WithAuthorizeRequestAuthorized(true),
-			server.WithAuthorizeRequestUserData(`{"uid"":1,"nickname":"askuy"}`),
-			server.WithSsoData(server.SsoData{
-				ParentToken: accessToken,
-				Uid:         1,
-				Platform:    "web",
-			}),
-		)
-
-		if err != nil {
-			c.JSON(401, err.Error())
-			return
-		}
-
-		// Output redirect with parameters
-		redirectUri, err := ar.GetRedirectUrl()
-		if err != nil {
-			c.JSON(401, "获取重定向地址失败")
-			return
-		}
-		c.Redirect(302, redirectUri)
+		ssoServer(c, ar, 1)
 		return
 	})
 	return router
+}
+
+// checkToken 判断是否已经有登录态
+func checkToken() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		reqView := ReqOauthLogin{
+			ResponseType: "code",
+		}
+		err := ctx.Bind(&reqView)
+		if err != nil {
+			ctx.Next()
+			return
+		}
+
+		ar := invoker.SsoComponent.HandleAuthorizeRequest(ctx.Request.Context(), server.AuthorizeRequestParam{
+			ClientId:     reqView.ClientId,
+			RedirectUri:  reqView.RedirectUri,
+			Scope:        reqView.Scope,
+			State:        reqView.State,
+			ResponseType: reqView.ResponseType,
+		})
+		if ar.IsError() {
+			ctx.JSON(401, ar.GetAllOutput())
+			return
+		}
+
+		token, err := ctx.Cookie(econf.GetString("sso.tokenCookieName"))
+		if err != nil {
+			ctx.Next()
+			return
+		}
+
+		uid, err := invoker.TokenStorage.GetUidByParentToken(ctx.Request.Context(), token)
+		if err != nil {
+			ctx.Next()
+			return
+		}
+		ssoServer(ctx, ar, uid)
+	}
+}
+
+func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
+	accessToken := oauth2dto.NewToken(86400 * 7)
+	err := ar.Build(
+		server.WithAuthorizeRequestAuthorized(true),
+		server.WithAuthorizeRequestUserData(`{"uid"":1,"nickname":"askuy"}`),
+		server.WithSsoData(server.SsoData{
+			ParentToken: accessToken,
+			Uid:         uid,
+			Platform:    "web",
+		}),
+	)
+
+	if err != nil {
+		c.JSON(401, err.Error())
+		return
+	}
+
+	// Output redirect with parameters
+	redirectUri, err := ar.GetRedirectUrl()
+	if err != nil {
+		c.JSON(401, "获取重定向地址失败")
+		return
+	}
+
+	// 种上单点登录cookie
+	c.SetCookie(econf.GetString("sso.tokenCookieName"), accessToken.Token, int(accessToken.ExpiresIn), "/", econf.GetString("sso.tokenDomain"), econf.GetBool("sso.tokenSecure"), true)
+	c.Redirect(302, redirectUri)
 }
 
 func HandleLoginPage(ar *server.AuthorizeRequest, w http.ResponseWriter, r *http.Request) bool {

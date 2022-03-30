@@ -11,5 +11,5 @@ logoutURL = "http://localhost:19001/oauth/logout" # sso 退出地址
 redirectURL = "http://localhost:29001/oauth/code" # 客户端 授权地址
 Domain = "localhost"
 StateCookieName = "sso_state"
-TokenCookieName = "ego_sso_token"
+TokenCookieName = "ego_token"
 

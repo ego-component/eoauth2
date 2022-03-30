@@ -66,7 +66,7 @@ func (ar *AccessRequest) handleAuthorizationCodeRequest(ctx context.Context, par
 	// get client authentication
 	auth := ar.getClientAuth(param.ClientAuthParam, ar.config.AllowClientSecretInParams)
 	if auth == nil {
-		ar.setError(E_INVALID_GRANT, nil, "getClientAuth_request=%s", "getClientAuth is required")
+		ar.setError(E_INVALID_GRANT, nil, "handleAuthorizationCodeRequest", "getClientAuth is required")
 		return ar
 	}
 
@@ -80,13 +80,13 @@ func (ar *AccessRequest) handleAuthorizationCodeRequest(ctx context.Context, par
 
 	// "code" is required
 	if ar.Code == "" {
-		ar.setError(E_INVALID_GRANT, nil, "auth_code_request=%s", "code is required")
+		ar.setError(E_INVALID_GRANT, nil, "handleAuthorizationCodeRequest", "code is required")
 		return ar
 	}
 
 	// must have a valid client
 	if ar.Client = ar.getClient(ctx, auth); ar.Client == nil {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "auth_code_request=%s", "client is nil")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "handleAuthorizationCodeRequest", "client is nil")
 		return ar
 	}
 
@@ -94,29 +94,29 @@ func (ar *AccessRequest) handleAuthorizationCodeRequest(ctx context.Context, par
 	var err error
 	ar.AuthorizeData, err = ar.config.storage.LoadAuthorize(ctx, ar.Code)
 	if err != nil {
-		ar.setError(E_INVALID_GRANT, err, "auth_code_request=%s", "error loading authorize data")
+		ar.setError(E_INVALID_GRANT, err, "handleAuthorizationCodeRequest", "error loading authorize data")
 		return ar
 	}
 	if ar.AuthorizeData == nil {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "auth_code_request=%s", "authorization data is nil")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "handleAuthorizationCodeRequest", "authorization data is nil")
 		return ar
 	}
 	if ar.AuthorizeData.Client == nil {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "auth_code_request=%s", "authorization client is nil")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "handleAuthorizationCodeRequest", "authorization client is nil")
 		return ar
 	}
 	if ar.AuthorizeData.Client.GetRedirectUri() == "" {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "auth_code_request=%s", "client redirect uri is empty")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "handleAuthorizationCodeRequest", "client redirect uri is empty")
 		return ar
 	}
 	if ar.AuthorizeData.IsExpiredAt(time.Now()) {
-		ar.setError(E_INVALID_GRANT, nil, "auth_code_request=%s", "authorization data is expired")
+		ar.setError(E_INVALID_GRANT, nil, "handleAuthorizationCodeRequest", "authorization data is expired")
 		return ar
 	}
 
 	// code must be from the client
 	if ar.AuthorizeData.Client.GetId() != ar.Client.GetId() {
-		ar.setError(E_INVALID_GRANT, nil, "auth_code_request=%s", "client code does not match")
+		ar.setError(E_INVALID_GRANT, nil, "handleAuthorizationCodeRequest", "client code does not match")
 		return ar
 	}
 
@@ -125,13 +125,13 @@ func (ar *AccessRequest) handleAuthorizationCodeRequest(ctx context.Context, par
 		ar.RedirectUri = FirstUri(ar.Client.GetRedirectUri(), ar.config.RedirectUriSeparator)
 	}
 	if realRedirectUri, err := ValidateUriList(ar.Client.GetRedirectUri(), ar.RedirectUri, ar.config.RedirectUriSeparator); err != nil {
-		ar.setError(E_INVALID_REQUEST, err, "auth_code_request=%s", "error validating client redirect")
+		ar.setError(E_INVALID_REQUEST, err, "handleAuthorizationCodeRequest", "error validating client redirect")
 		return ar
 	} else {
 		ar.RedirectUri = realRedirectUri
 	}
 	if ar.AuthorizeData.RedirectUri != ar.RedirectUri {
-		ar.setError(E_INVALID_REQUEST, errors.New("Redirect uri is different"), "auth_code_request=%s", "client redirect does not match authorization data")
+		ar.setError(E_INVALID_REQUEST, errors.New("Redirect uri is different"), "handleAuthorizationCodeRequest", "client redirect does not match authorization data")
 		return ar
 	}
 
@@ -139,8 +139,7 @@ func (ar *AccessRequest) handleAuthorizationCodeRequest(ctx context.Context, par
 	if len(ar.AuthorizeData.CodeChallenge) > 0 {
 		// https://tools.ietf.org/html/rfc7636#section-4.1
 		if matched := pkceMatcher.MatchString(ar.CodeVerifier); !matched {
-			ar.setError(E_INVALID_REQUEST, errors.New("code_verifier has invalid format"),
-				"auth_code_request=%s", "pkce code challenge verifier does not match")
+			ar.setError(E_INVALID_REQUEST, errors.New("code_verifier has invalid format"), "handleAuthorizationCodeRequest", "pkce code challenge verifier does not match")
 			return ar
 		}
 
@@ -153,13 +152,11 @@ func (ar *AccessRequest) handleAuthorizationCodeRequest(ctx context.Context, par
 			hash := sha256.Sum256([]byte(ar.CodeVerifier))
 			codeVerifier = base64.RawURLEncoding.EncodeToString(hash[:])
 		default:
-			ar.setError(E_INVALID_REQUEST, nil,
-				"auth_code_request=%s", "pkce transform algorithm not supported (rfc7636)")
+			ar.setError(E_INVALID_REQUEST, nil, "handleAuthorizationCodeRequest", "pkce transform algorithm not supported (rfc7636)")
 			return ar
 		}
 		if codeVerifier != ar.AuthorizeData.CodeChallenge {
-			ar.setError(E_INVALID_GRANT, errors.New("code_verifier failed comparison with code_challenge"),
-				"auth_code_request=%s", "pkce code verifier does not match challenge")
+			ar.setError(E_INVALID_GRANT, errors.New("code_verifier failed comparison with code_challenge"), "handleAuthorizationCodeRequest", "pkce code verifier does not match challenge")
 			return ar
 		}
 	}
@@ -186,13 +183,13 @@ func (ar *AccessRequest) handleRefreshTokenRequest(ctx context.Context, param Ac
 
 	// "refresh_token" is required
 	if ar.Code == "" {
-		ar.setError(E_INVALID_GRANT, nil, "refresh_token=%s", "refresh_token is required")
+		ar.setError(E_INVALID_GRANT, nil, "handleRefreshTokenRequest", "refresh_token is required")
 		return ar
 	}
 
 	// must have a valid client
 	if ar.Client = ar.getClient(ctx, auth); ar.Client == nil {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "auth_code_request=%s", "client is nil")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "handleRefreshTokenRequest", "client is nil")
 		return ar
 	}
 
@@ -200,25 +197,25 @@ func (ar *AccessRequest) handleRefreshTokenRequest(ctx context.Context, param Ac
 	var err error
 	ar.AccessData, err = ar.config.storage.LoadRefresh(ctx, ar.Code)
 	if err != nil {
-		ar.setError(E_INVALID_GRANT, err, "refresh_token=%s", "error loading access data")
+		ar.setError(E_INVALID_GRANT, err, "handleRefreshTokenRequest", "error loading access data")
 		return ar
 	}
 	if ar.AccessData == nil {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "refresh_token=%s", "access data is nil")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "handleRefreshTokenRequest", "access data is nil")
 		return ar
 	}
 	if ar.AccessData.Client == nil {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "refresh_token=%s", "access data client is nil")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "handleRefreshTokenRequest", "access data client is nil")
 		return ar
 	}
 	if ar.AccessData.Client.GetRedirectUri() == "" {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "refresh_token=%s", "access data client redirect uri is empty")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "handleRefreshTokenRequest", "access data client redirect uri is empty")
 		return ar
 	}
 
 	// client must be the same as the previous token
 	if ar.AccessData.Client.GetId() != ar.Client.GetId() {
-		ar.setError(E_INVALID_CLIENT, errors.New("Client id must be the same from previous token"), "refresh_token=%s, current=%v, previous=%v", "client mismatch", ar.Client.GetId(), ar.AccessData.Client.GetId())
+		ar.setError(E_INVALID_CLIENT, errors.New("Client id must be the same from previous token"), "handleRefreshTokenRequest", "client mismatch,refresh_token="+ar.Code+", current="+ar.Client.GetId()+", previous="+ar.AccessData.Client.GetId())
 		return nil
 
 	}
@@ -232,7 +229,7 @@ func (ar *AccessRequest) handleRefreshTokenRequest(ctx context.Context, param Ac
 
 	if extraScopes(ar.AccessData.Scope, ar.Scope) {
 		msg := "the requested scope must not include any scope not originally granted by the resource owner"
-		ar.setError(E_ACCESS_DENIED, errors.New(msg), "refresh_token=%s", msg)
+		ar.setError(E_ACCESS_DENIED, errors.New(msg), "handleRefreshTokenRequest", msg)
 		return ar
 	}
 
@@ -246,25 +243,25 @@ func (ar *AccessRequest) handleRefreshTokenRequest(ctx context.Context, param Ac
 func (ar *AccessRequest) getClient(ctx context.Context, auth *BasicAuth) Client {
 	client, err := ar.config.storage.GetClient(ctx, auth.Username)
 	if err == ErrNotFound {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "get_client=%s", "not found")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "getClient", "not found")
 		return nil
 	}
 	if err != nil {
-		ar.setError(E_SERVER_ERROR, err, "get_client=%s", "error finding client")
+		ar.setError(E_SERVER_ERROR, err, "getClient", "error finding client")
 		return nil
 	}
 	if client == nil {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "get_client=%s", "client is nil")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "getClient", "client is nil")
 		return nil
 	}
 
 	if !CheckClientSecret(client, auth.Password) {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "get_client=%s, client_id=%v", "client check failed", client.GetId())
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "getClient", "client check failed, client_id="+client.GetId())
 		return nil
 	}
 
 	if client.GetRedirectUri() == "" {
-		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "get_client=%s", "client redirect uri is empty")
+		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "get_client", "client redirect uri is empty")
 		return nil
 	}
 	return client
@@ -297,11 +294,11 @@ func (ar *AccessRequest) getClientAuth(param ClientAuthParam, allowQueryParams b
 		Authorization: param.Authorization,
 	})
 	if err != nil {
-		ar.setError(E_INVALID_REQUEST, err, "get_client_auth=%s", "check auth error")
+		ar.setError(E_INVALID_REQUEST, err, "get_client_auth", "check auth error")
 		return nil
 	}
 	if auth == nil {
-		ar.setError(E_INVALID_REQUEST, errors.New("Client authentication not sent"), "get_client_auth=%s", "client authentication not sent")
+		ar.setError(E_INVALID_REQUEST, errors.New("Client authentication not sent"), "get_client_auth", "client authentication not sent")
 		return nil
 	}
 	return auth
@@ -377,7 +374,7 @@ func (ar *AccessRequest) Build(options ...AccessRequestOption) error {
 		redirectUri = ar.RedirectUri
 	}
 	if !ar.authorized {
-		ar.setError(E_ACCESS_DENIED, nil, "finish_access_request=%s", "authorization failed")
+		ar.setError(E_ACCESS_DENIED, ar.responseErr, "AccessRequestBuild", "authorization failed")
 		return fmt.Errorf("Build error2, err %w", ar.responseErr)
 	}
 	var ret *AccessData
@@ -400,7 +397,7 @@ func (ar *AccessRequest) Build(options ...AccessRequestOption) error {
 		// generate access token
 		ret.AccessToken, ret.RefreshToken, err = ar.config.accessTokenGen.GenerateAccessToken(ret, ar.GenerateRefresh)
 		if err != nil {
-			ar.setError(E_SERVER_ERROR, err, "finish_access_request=%s", "error generating token")
+			ar.setError(E_SERVER_ERROR, err, "AccessRequestBuild", "error generating token")
 			return fmt.Errorf("Build error3, err %w", ar.responseErr)
 		}
 	} else {
@@ -409,7 +406,7 @@ func (ar *AccessRequest) Build(options ...AccessRequestOption) error {
 
 	// save access token
 	if err = ar.config.storage.SaveAccess(ar.Ctx, ret); err != nil {
-		ar.setError(E_SERVER_ERROR, err, "finish_access_request=%s", "error saving access token")
+		ar.setError(E_SERVER_ERROR, err, "AccessRequestBuild", "error saving access token")
 		return fmt.Errorf("Build error4, err %w", ar.responseErr)
 	}
 
