@@ -7,11 +7,14 @@
 
 
 ## Example
+### Oauth2登录
 ```bash
 cd examples/simple && EGO_DEBUG=true && go run main.go
 // 访问 http://127.0.0.1:9090/app
 ```
-
+### 单点登录
+* [单点登录文档](./examples/sso/readme.md)
+* [单点登录Examples](./examples/sso/makefile)
 
 ## Example Server
 ```go
