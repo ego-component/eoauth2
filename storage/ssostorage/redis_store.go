@@ -78,3 +78,28 @@ func (u accessData) Marshal() []byte {
 func (u *accessData) Unmarshal(content []byte) error {
 	return msgpack.Unmarshal(content, u)
 }
+
+type UidsStore []int64
+
+func (u UidsStore) Marshal() []byte {
+	info, _ := msgpack.Marshal(u)
+	return info
+}
+
+func (u *UidsStore) Unmarshal(content []byte) error {
+	return msgpack.Unmarshal(content, u)
+}
+
+type UidInfoStore struct {
+	Platform string `msgpack:"p"`
+	Ctime    int64  `msgpack:"c"`
+}
+
+func (u UidInfoStore) Marshal() []byte {
+	info, _ := msgpack.Marshal(u)
+	return info
+}
+
+func (u *UidInfoStore) Unmarshal(content []byte) error {
+	return msgpack.Unmarshal(content, u)
+}

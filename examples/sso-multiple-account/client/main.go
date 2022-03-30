@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/ego-component/eoauth2/examples/sso/client/pkg/invoker"
-	"github.com/ego-component/eoauth2/examples/sso/client/pkg/server"
+	"github.com/ego-component/eoauth2/examples/sso-multiple-account/client/pkg/invoker"
+	"github.com/ego-component/eoauth2/examples/sso-multiple-account/client/pkg/server"
 	"github.com/gotomicro/ego"
 	"github.com/gotomicro/ego/core/elog"
 )

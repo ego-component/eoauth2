@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	ssov1 "github.com/ego-component/eoauth2/examples/sso/proto"
-	"github.com/ego-component/eoauth2/examples/sso/server/pkg/invoker"
+	ssov1 "github.com/ego-component/eoauth2/examples/sso-multiple-account/proto"
+	"github.com/ego-component/eoauth2/examples/sso-multiple-account/server/pkg/invoker"
 	"github.com/ego-component/eoauth2/server"
 	"github.com/gotomicro/ego/server/egrpc"
+	"github.com/spf13/cast"
 )
 
 func ServeGrpc() *egrpc.Component {
@@ -72,16 +73,19 @@ func (SsoGrpc) RemoveToken(ctx context.Context, req *ssov1.RemoveTokenRequest) (
 	err := invoker.TokenStorage.RemoveAllAccess(ctx, req.Token)
 	return resp, err
 }
-func (SsoGrpc) GetUserByToken(ctx context.Context, req *ssov1.GetUserByTokenRequest) (*ssov1.GetUserByTokenResponse, error) {
-	uid, err := invoker.TokenStorage.GetUidByToken(ctx, req.Token)
+func (SsoGrpc) GetUsersByToken(ctx context.Context, req *ssov1.GetUsersByTokenRequest) (*ssov1.GetUsersByTokenResponse, error) {
+	uids, err := invoker.TokenStorage.GetUidsByToken(ctx, req.Token)
 	if err != nil {
 		return nil, err
 	}
-	return &ssov1.GetUserByTokenResponse{
-		Uid:      uid,
-		Nickname: "askuy",
-		Username: "",
-		Avatar:   "",
-		Email:    "",
+	output := make([]*ssov1.User, 0)
+	for _, uid := range uids {
+		output = append(output, &ssov1.User{
+			Uid:      uid,
+			Nickname: "askuy" + cast.ToString(uid),
+		})
+	}
+	return &ssov1.GetUsersByTokenResponse{
+		User: output,
 	}, nil
 }

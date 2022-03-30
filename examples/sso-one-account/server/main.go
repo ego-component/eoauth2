@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/ego-component/eoauth2/examples/sso/server/job"
-	"github.com/ego-component/eoauth2/examples/sso/server/pkg/invoker"
-	"github.com/ego-component/eoauth2/examples/sso/server/pkg/server"
+	"github.com/ego-component/eoauth2/examples/sso-one-account/server/job"
+	"github.com/ego-component/eoauth2/examples/sso-one-account/server/pkg/invoker"
+	"github.com/ego-component/eoauth2/examples/sso-one-account/server/pkg/server"
 	"github.com/gotomicro/ego"
 	"github.com/gotomicro/ego/core/elog"
 	"github.com/gotomicro/ego/task/ejob"

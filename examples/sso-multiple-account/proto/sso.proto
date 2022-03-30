@@ -1,0 +1,82 @@
+syntax = "proto3";
+package sso.v1;
+
+option go_package = "sso/v1;ssov1";
+
+// 单点登录服务
+service Sso {
+  // 根据Code码，获取Access的Token信息
+  rpc GetToken(GetTokenRequest) returns (GetTokenResponse);
+  // 根据token，删除access的token信息，退出登录
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  // 根据token，删除access的token信息，退出登录
+  rpc RemoveToken(RemoveTokenRequest) returns (RemoveTokenResponse);
+  // 根据Token信息，获取用户数据
+  rpc GetUsersByToken(GetUsersByTokenRequest) returns (GetUsersByTokenResponse);
+}
+
+// 获取Access的请求
+message GetTokenRequest {
+  // Code
+  string code = 1;
+  // 按照oauth2规范，编码client id client secret，传递数据， Authorization: Basic xxxx==
+  string authorization = 2;
+}
+
+// 获取Access的响应
+message GetTokenResponse {
+  // Token信息
+  string token = 1;
+  // 过期时间
+  int64 expires_in = 2;
+}
+
+// 获取Access的请求
+message RefreshTokenRequest {
+  // Code
+  string code = 1;
+  // 按照oauth2规范，编码client id client secret，传递数据， Authorization: Basic xxxx==
+  string authorization = 2;
+}
+
+// 获取Access的响应
+message RefreshTokenResponse {
+  // Token信息
+  string token = 1;
+  // 过期时间
+  int64 expires_in = 2;
+}
+
+// 删除Access的请求
+message RemoveTokenRequest {
+  // Token信息
+  string token = 1;
+}
+
+// 删除Access的响应
+message RemoveTokenResponse {}
+
+// 获取用户信息的请求
+message GetUsersByTokenRequest {
+  // Token信息
+  string token = 1;
+}
+
+// 用户信息
+message GetUsersByTokenResponse {
+  repeated User user = 1;
+}
+
+// 用户信息
+message User {
+  // 用户uid
+  int64 uid = 1;
+  // 用户昵称，中文名
+  string nickname = 2;
+  // 用户名，拼音
+  string username = 3;
+  // 头像
+  string avatar = 4;
+  // 邮箱
+  string email = 5;
+}

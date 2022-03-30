@@ -3,8 +3,9 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"time"
 
-	"github.com/ego-component/eoauth2/examples/sso/server/pkg/invoker"
+	"github.com/ego-component/eoauth2/examples/sso-multiple-account/server/pkg/invoker"
 	"github.com/ego-component/eoauth2/server"
 	oauth2dto "github.com/ego-component/eoauth2/storage/dto"
 	"github.com/gin-gonic/gin"
@@ -30,7 +31,7 @@ type ReqToken struct {
 
 func ServeHttp() *egin.Component {
 	router := egin.Load("server.http").Build()
-	router.Any("/authorize", checkToken(), func(c *gin.Context) {
+	router.Any("/authorize", func(c *gin.Context) {
 		reqView := ReqOauthLogin{}
 		err := c.Bind(&reqView)
 		if err != nil {
@@ -49,61 +50,30 @@ func ServeHttp() *egin.Component {
 			return
 		}
 
-		if !HandleLoginPage(ar, c.Writer, c.Request) {
+		uid := HandleLoginPage(ar, c.Writer, c.Request)
+		if uid == 0 {
 			return
 		}
 
-		ssoServer(c, ar, 1)
+		ssoServer(c, ar, uid)
 		return
 	})
 	return router
 }
 
-// checkToken 判断是否已经有登录态
-func checkToken() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		reqView := ReqOauthLogin{
-			ResponseType: "code",
-		}
-		err := ctx.Bind(&reqView)
-		if err != nil {
-			ctx.Next()
-			return
-		}
-
-		ar := invoker.SsoComponent.HandleAuthorizeRequest(ctx.Request.Context(), server.AuthorizeRequestParam{
-			ClientId:     reqView.ClientId,
-			RedirectUri:  reqView.RedirectUri,
-			Scope:        reqView.Scope,
-			State:        reqView.State,
-			ResponseType: reqView.ResponseType,
-		})
-		if ar.IsError() {
-			ctx.JSON(401, ar.GetAllOutput())
-			ctx.Abort()
-			return
-		}
-
-		token, err := ctx.Cookie(econf.GetString("sso.tokenCookieName"))
-		if err != nil {
-			ctx.Next()
-			return
-		}
-
-		uid, err := invoker.TokenStorage.GetUidByParentToken(ctx.Request.Context(), token)
-		if err != nil {
-			ctx.Next()
-			return
-		}
-		ssoServer(ctx, ar, uid)
-	}
-}
-
 func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
-	accessToken := oauth2dto.NewToken(86400 * 7)
-	err := ar.Build(
+	accessToken := oauth2dto.Token{}
+	token, err := c.Cookie(econf.GetString("sso.tokenCookieName"))
+	if err != nil {
+		accessToken = oauth2dto.NewToken(86400 * 7)
+	} else {
+		accessToken.Token = token
+		accessToken.AuthAt = time.Now().Unix()
+		accessToken.ExpiresIn = 86400 * 7
+	}
+
+	err = ar.Build(
 		server.WithAuthorizeRequestAuthorized(true),
-		server.WithAuthorizeRequestUserData(`{"uid"":1,"nickname":"askuy"}`),
 		server.WithSsoData(server.SsoData{
 			ParentToken: accessToken,
 			Uid:         uid,
@@ -130,15 +100,20 @@ func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
 	c.Redirect(302, redirectUri)
 }
 
-func HandleLoginPage(ar *server.AuthorizeRequest, w http.ResponseWriter, r *http.Request) bool {
+func HandleLoginPage(ar *server.AuthorizeRequest, w http.ResponseWriter, r *http.Request) int64 {
 	r.ParseForm()
-	if r.Method == "POST" && r.FormValue("login") == "askuy" && r.FormValue("password") == "123456" {
-		return true
+	if r.Method == "POST" && r.FormValue("login") == "askuy1" && r.FormValue("password") == "123456" {
+		return 1
+	}
+
+	if r.Method == "POST" && r.FormValue("login") == "askuy2" && r.FormValue("password") == "123456" {
+		return 2
 	}
 
 	w.Write([]byte("<html><body>"))
 
-	w.Write([]byte(fmt.Sprintf("LOGIN %s (use askuy/123456)<br/>", ar.Client.GetId())))
+	w.Write([]byte(fmt.Sprintf("LOGIN %s (use askuy1/123456)<br/>", ar.Client.GetId())))
+	w.Write([]byte(fmt.Sprintf("LOGIN %s (use askuy2/123456)<br/>", ar.Client.GetId())))
 	w.Write([]byte(fmt.Sprintf("<form action=\"/authorize?%s\" method=\"POST\">", r.URL.RawQuery)))
 
 	w.Write([]byte("Login: <input type=\"text\" name=\"login\" /><br/>"))
@@ -148,5 +123,5 @@ func HandleLoginPage(ar *server.AuthorizeRequest, w http.ResponseWriter, r *http
 	w.Write([]byte("</form>"))
 
 	w.Write([]byte("</body></html>"))
-	return false
+	return 0
 }

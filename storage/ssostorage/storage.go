@@ -308,19 +308,41 @@ func (s *Storage) RemoveRefresh(ctx context.Context, code string) (err error) {
 	return
 }
 
+// GetUidByParentToken 用于单账号
+func (s *Storage) GetUidByParentToken(ctx context.Context, token string) (uid int64, err error) {
+	uids, err := s.tokenServer.getUidsByParentToken(ctx, token)
+	if err != nil {
+		return 0, err
+	}
+	uid = uids[0]
+	return
+}
+
+// GetUidByToken 用于单账号
+func (s *Storage) GetUidByToken(ctx context.Context, token string) (uid int64, err error) {
+	uids, err := s.tokenServer.getUidsByToken(ctx, token)
+	if err != nil {
+		return 0, err
+	}
+	uid = uids[0]
+	return
+}
+
+// GetUidsByParentToken 用于多账号
+func (s *Storage) GetUidsByParentToken(ctx context.Context, token string) (uids []int64, err error) {
+	return s.tokenServer.getUidsByParentToken(ctx, token)
+}
+
+// GetUidsByToken 用于多账号
+func (s *Storage) GetUidsByToken(ctx context.Context, token string) (uid []int64, err error) {
+	return s.tokenServer.getUidsByToken(ctx, token)
+}
+
 // RenewParentToken 续期父级token
 func (s *Storage) RenewParentToken(ctx context.Context, pToken dto.Token) (err error) {
 	return s.tokenServer.renewParentToken(ctx, pToken)
 }
 
-func (s *Storage) GetUidByParentToken(ctx context.Context, token string) (uid int64, err error) {
-	return s.tokenServer.getUidByParentToken(ctx, token)
-}
-
 func (s *Storage) RemoveParentToken(ctx context.Context, pToken string) (err error) {
 	return s.tokenServer.removeParentToken(ctx, pToken)
-}
-
-func (s *Storage) GetUidByToken(ctx context.Context, token string) (uid int64, err error) {
-	return s.tokenServer.getUidByToken(ctx, token)
 }

@@ -12,8 +12,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/ego-component/eoauth2/examples/sso/client/pkg/invoker"
-	ssov1 "github.com/ego-component/eoauth2/examples/sso/proto"
+	"github.com/ego-component/eoauth2/examples/sso-multiple-account/client/pkg/invoker"
+	ssov1 "github.com/ego-component/eoauth2/examples/sso-multiple-account/proto"
 	"github.com/gin-gonic/gin"
 	"github.com/gotomicro/ego/core/elog"
 	"github.com/gotomicro/ego/server/egin"
@@ -44,10 +44,13 @@ func ServeHttp() *egin.Component {
 		}
 
 		token, _ := ctx.Cookie(invoker.OauthConfig.TokenCookieName)
-		userInfo := user.(*ssov1.User)
+		userInfos := user.([]*ssov1.User)
 		ctx.Writer.Write([]byte("<html><body><br>"))
-		ctx.Writer.Write([]byte("uid:" + cast.ToString(userInfo.Uid) + ",nickname:" + userInfo.Nickname + "<br>"))
+		for _, userInfo := range userInfos {
+			ctx.Writer.Write([]byte("uid:" + cast.ToString(userInfo.Uid) + ",nickname:" + userInfo.Nickname + "<br>"))
+		}
 		ctx.Writer.Write([]byte("token:" + token + "<br>"))
+		ctx.Writer.Write([]byte("<a href=\"/login\" target=\"/_blank\">Login</a><br/>"))
 		ctx.Writer.Write([]byte("<a href=\"/logout\" target=\"/_blank\">Logout</a><br/>"))
 		ctx.Writer.Write([]byte("<a href=\"/refreshToken\" target=\"/_blank\">refresh token</a><br/>"))
 		ctx.Writer.Write([]byte("</body></html>"))
@@ -193,22 +196,14 @@ func checkToken() gin.HandlerFunc {
 			ctx.Next()
 			return
 		}
-		userByToken, err := invoker.SsoGrpc.GetUserByToken(ctx, &ssov1.GetUserByTokenRequest{
+		userByToken, err := invoker.SsoGrpc.GetUsersByToken(ctx, &ssov1.GetUsersByTokenRequest{
 			Token: token,
 		})
 		if err != nil {
 			ctx.Next()
 			return
 		}
-		user := &ssov1.User{
-			Uid:      userByToken.Uid,
-			Nickname: userByToken.Nickname,
-			Username: userByToken.Username,
-			Avatar:   userByToken.Avatar,
-			Email:    userByToken.Email,
-		}
-		ctx.Request = ctx.Request.WithContext(context.WithValue(ctx.Request.Context(), "x-ego-uid", userByToken.Uid))
-		ctx.Set(AuthKey, user)
+		ctx.Set(AuthKey, userByToken.GetUser())
 		ctx.Next()
 	}
 }

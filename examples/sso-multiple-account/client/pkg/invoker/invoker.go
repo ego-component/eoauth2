@@ -1,7 +1,7 @@
 package invoker
 
 import (
-	ssov1 "github.com/ego-component/eoauth2/examples/sso/proto"
+	ssov1 "github.com/ego-component/eoauth2/examples/sso-multiple-account/proto"
 	"github.com/gotomicro/ego/client/egrpc"
 	"github.com/gotomicro/ego/core/econf"
 	"golang.org/x/oauth2"

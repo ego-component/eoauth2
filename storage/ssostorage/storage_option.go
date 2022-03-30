@@ -25,3 +25,9 @@ func WithParentAccessExpiration(key int64) Option {
 		c.config.parentAccessExpiration = key
 	}
 }
+
+func WithEnableMultipleAccounts(flag bool) Option {
+	return func(c *Storage) {
+		c.config.enableMultipleAccounts = flag
+	}
+}

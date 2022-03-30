@@ -12,6 +12,7 @@ import (
 )
 
 type config struct {
+	enableMultipleAccounts bool  // 开启多账号，默认false
 	parentAccessExpiration int64 // 父亲节点token
 
 	/*
@@ -59,6 +60,7 @@ type config struct {
 
 func defaultConfig() *config {
 	return &config{
+		enableMultipleAccounts:    false,
 		uidMapParentTokenKey:      "sso:uid:%d",  // uid map parent token type
 		uidMapParentTokenFieldKey: "%s|%s",       // uid map parent token type
 		parentTokenMapSubTokenKey: "sso:ptk:%s",  //  parent token map
@@ -283,19 +285,21 @@ type parentToken struct {
 	config             *config
 	redis              *eredis.Component
 	hashKeyCtime       string
-	hashKeyUid         string
+	hashKeyUids        string
 	hashKeyPlatform    string
 	hashExpireTimeList string
+	hashKeyUidInfo     string
 }
 
 func newParentToken(config *config, redis *eredis.Component) *parentToken {
 	return &parentToken{
 		config:             config,
 		redis:              redis,
-		hashKeyCtime:       "_c",   // create time
-		hashKeyPlatform:    "_p",   // 类型
-		hashKeyUid:         "_u",   // uid
-		hashExpireTimeList: "_etl", // expire time List
+		hashKeyCtime:       "_c",     // create time
+		hashKeyPlatform:    "_p",     // 类型
+		hashKeyUids:        "_u",     // uid
+		hashKeyUidInfo:     "_ui:%d", // uid info
+		hashExpireTimeList: "_etl",   // expire time List
 
 	}
 }
@@ -305,10 +309,50 @@ func (p *parentToken) getKey(pToken string) string {
 }
 
 func (p *parentToken) create(ctx context.Context, pToken dto.Token, platform string, uid int64) error {
-	err := p.redis.HMSet(ctx, p.getKey(pToken.Token), map[string]interface{}{
-		p.hashKeyCtime:    time.Now().Unix(),
-		p.hashKeyUid:      uid,
-		p.hashKeyPlatform: platform,
+	userInfo := UidInfoStore{
+		Platform: platform,
+		Ctime:    time.Now().Unix(),
+	}
+	// 如果没有开启多账号，那么就是单账号，直接set
+	if !p.config.enableMultipleAccounts {
+		uids := UidsStore{uid}
+		uids.Marshal()
+		err := p.redis.HMSet(ctx, p.getKey(pToken.Token), map[string]interface{}{
+			p.hashKeyCtime:                     time.Now().Unix(),
+			p.hashKeyUids:                      uids.Marshal(),
+			fmt.Sprintf(p.hashKeyUidInfo, uid): userInfo.Marshal(),
+		}, time.Duration(pToken.ExpiresIn)*time.Second)
+		if err != nil {
+			return fmt.Errorf("parentToken.create failed, err:%w", err)
+		}
+		return nil
+	}
+
+	uids, err := p.getUids(ctx, pToken.Token)
+	// 系统错误
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return fmt.Errorf("parentToken.create get key empty, err: %w", err)
+	}
+
+	// 如果不存在，那么直接set，创建
+	if errors.Is(err, redis.Nil) {
+		uids = UidsStore{uid}
+		uids.Marshal()
+		err = p.redis.HMSet(ctx, p.getKey(pToken.Token), map[string]interface{}{
+			p.hashKeyCtime:                     time.Now().Unix(),
+			p.hashKeyUids:                      uids.Marshal(),
+			fmt.Sprintf(p.hashKeyUidInfo, uid): userInfo.Marshal(),
+		}, time.Duration(pToken.ExpiresIn)*time.Second)
+		if err != nil {
+			return fmt.Errorf("parentToken.create failed, err:%w", err)
+		}
+		return nil
+	}
+	// 如果存在，那么需要取出之前数据，重新写入新的uid信息
+	uids = append(uids, uid)
+	err = p.redis.HMSet(ctx, p.getKey(pToken.Token), map[string]interface{}{
+		p.hashKeyUids:                      uids.Marshal(),
+		fmt.Sprintf(p.hashKeyUidInfo, uid): userInfo.Marshal(),
 	}, time.Duration(pToken.ExpiresIn)*time.Second)
 	if err != nil {
 		return fmt.Errorf("parentToken.create failed, err:%w", err)
@@ -333,9 +377,25 @@ func (p *parentToken) delete(ctx context.Context, pToken string) error {
 	return nil
 }
 
+func (p *parentToken) getUids(ctx context.Context, pToken string) (uids UidsStore, err error) {
+	uidBytes, err := p.redis.Client().HGet(ctx, p.getKey(pToken), p.hashKeyUids).Bytes()
+	// 系统错误
+	if err != nil {
+		err = fmt.Errorf("getUids failed, err: %w", err)
+		return
+	}
+
+	err = uids.Unmarshal(uidBytes)
+	if err != nil {
+		err = fmt.Errorf("parentToken.create unmarshal err: %w", err)
+		return
+	}
+	return
+}
+
 func (p *parentToken) getUid(ctx context.Context, pToken string) (uid int64, err error) {
 	// 根据父节点token，获取用户信息
-	uid, err = p.redis.Client().HGet(ctx, p.getKey(pToken), p.hashKeyUid).Int64()
+	uid, err = p.redis.Client().HGet(ctx, p.getKey(pToken), p.hashKeyUids).Int64()
 	if err != nil {
 		err = fmt.Errorf("parentToken getUid failed, err: %w", err)
 		return
