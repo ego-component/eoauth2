@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/ego-component/eoauth2/server"
-	"github.com/ego-component/eoauth2/server/model"
-	"github.com/ego-component/eoauth2/storage/dao"
 	"github.com/go-redis/redis/v8"
 	"github.com/gotomicro/ego-component/egorm"
 	"github.com/gotomicro/ego-component/eredis"
@@ -23,23 +21,19 @@ type Storage struct {
 	redis       *eredis.Component
 }
 
-// NewStorage returns a new redis Storage instance.
-func NewStorage(db *egorm.Component, redis *eredis.Component, options ...Option) *Storage {
+// newStorage returns a new redis Component instance.
+func newStorage(config *config, logger *elog.Component, db *egorm.Component, redis *eredis.Component, tokenServer *tokenServer) *Storage {
 	container := &Storage{
+		config: config,
 		db:     db,
-		logger: elog.EgoLogger.With(elog.FieldComponent("oauth2.storage")),
-		config: defaultConfig(),
+		logger: logger,
 	}
-	for _, option := range options {
-		option(container)
-	}
-	tSrv := initTokenServer(container.config, redis)
-	container.tokenServer = tSrv
+	container.tokenServer = tokenServer
 	container.redis = redis
 	return container
 }
 
-// Clone the Storage if needed. For example, using mgo, you can clone the session with session.Clone
+// Clone the Component if needed. For example, using mgo, you can clone the session with session.Clone
 // to avoid concurrent access problems.
 // This is to avoid cloning the connection at each method access.
 // Can return itself if not a problem.
@@ -47,26 +41,8 @@ func (s *Storage) Clone() server.Storage {
 	return s
 }
 
-// Close the resources the Storage potentially holds (using Clone for example)
+// Close the resources the Component potentially holds (using Clone for example)
 func (s *Storage) Close() {
-}
-
-// CreateClient create client
-func (s *Storage) CreateClient(ctx context.Context, app *dao.App) (err error) {
-	err = dao.CreateApp(s.db.WithContext(ctx), app)
-	if err != nil {
-		return fmt.Errorf("sso storage CreateClient failed, err: %w", err)
-	}
-	client := &clientInfo{
-		Id:          app.ClientId,
-		Secret:      app.Secret,
-		RedirectUri: app.RedirectUri,
-	}
-	err = s.redis.HSet(ctx, s.config.storeClientInfoKey, app.ClientId, client.Marshal())
-	if err != nil {
-		return fmt.Errorf("sso storage CreateClient failed2, err: %w", err)
-	}
-	return nil
 }
 
 // GetClient loads the client by id
@@ -271,17 +247,6 @@ func (s *Storage) RemoveAccess(ctx context.Context, token string) (err error) {
 	return
 }
 
-// RemoveAllAccess 通过token，删除自己的token，以及父token
-func (s *Storage) RemoveAllAccess(ctx context.Context, token string) (err error) {
-	pToken, err := s.tokenServer.getParentTokenByToken(ctx, token)
-	if err != nil {
-		return err
-	}
-
-	// 删除redis token
-	return s.tokenServer.removeParentToken(ctx, pToken)
-}
-
 // LoadRefresh retrieves refresh AccessData. Client information MUST be loaded together.
 // 原本的load refresh，是使用refresh token来换取新的token，但是在单点登录下，可以简单操作。
 // 1 拿到原先的sub token，看是否有效
@@ -298,43 +263,4 @@ func (s *Storage) LoadRefresh(ctx context.Context, token string) (*server.Access
 func (s *Storage) RemoveRefresh(ctx context.Context, code string) (err error) {
 	//err = dao.DeleteRefreshByToken(s.db.WithContext(ctx), code)
 	return
-}
-
-// GetUidByParentToken 用于单账号
-func (s *Storage) GetUidByParentToken(ctx context.Context, token string) (uid int64, err error) {
-	uids, err := s.tokenServer.getUidsByParentToken(ctx, token)
-	if err != nil {
-		return 0, err
-	}
-	uid = uids[0]
-	return
-}
-
-// GetUidByToken 用于单账号
-func (s *Storage) GetUidByToken(ctx context.Context, token string) (uid int64, err error) {
-	uids, err := s.tokenServer.getUidsByToken(ctx, token)
-	if err != nil {
-		return 0, err
-	}
-	uid = uids[0]
-	return
-}
-
-// GetUidsByParentToken 用于多账号
-func (s *Storage) GetUidsByParentToken(ctx context.Context, token string) (uids []int64, err error) {
-	return s.tokenServer.getUidsByParentToken(ctx, token)
-}
-
-// GetUidsByToken 用于多账号
-func (s *Storage) GetUidsByToken(ctx context.Context, token string) (uid []int64, err error) {
-	return s.tokenServer.getUidsByToken(ctx, token)
-}
-
-// RenewParentToken 续期父级token
-func (s *Storage) RenewParentToken(ctx context.Context, pToken model.Token) (err error) {
-	return s.tokenServer.renewParentToken(ctx, pToken)
-}
-
-func (s *Storage) RemoveParentToken(ctx context.Context, pToken string) (err error) {
-	return s.tokenServer.removeParentToken(ctx, pToken)
 }

@@ -17,7 +17,7 @@ func InitAdminData(ctx ejob.Context) (err error) {
 	//	return err
 	//}
 	//fmt.Println("create table ok")
-	err = invoker.TokenStorage.CreateClient(ctx.Ctx, &dao.App{
+	err = invoker.TokenStorage.GetAPI().CreateClient(ctx.Ctx, &dao.App{
 		ClientId:    "1234",
 		Name:        "sso-client",
 		Secret:      "5678",

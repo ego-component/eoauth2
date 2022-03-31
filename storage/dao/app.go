@@ -46,3 +46,19 @@ func CreateApp(db *gorm.DB, data *App) (err error) {
 	}
 	return
 }
+
+func UpdateApp(db *gorm.DB, clientId string, updates map[string]interface{}) (err error) {
+	err = db.Where("client_id = ?", clientId).Updates(updates).Error
+	if err != nil {
+		return fmt.Errorf("UpdateApp failed, err:%w", err)
+	}
+	return
+}
+
+func DeleteApp(db *gorm.DB, clientId string) (err error) {
+	err = db.Where("client_id = ?", clientId).Updates(map[string]interface{}{"dtime": 0}).Error
+	if err != nil {
+		return fmt.Errorf("DeleteApp failed, err:%w", err)
+	}
+	return
+}

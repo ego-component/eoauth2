@@ -10,14 +10,14 @@ type uidTokenExpire struct {
 	ExpireTime int64  `msgpack:"et"`
 }
 
-type uidTokenExpires []uidTokenExpire
+type UidTokenExpires []uidTokenExpire
 
-func (u uidTokenExpires) Marshal() []byte {
+func (u UidTokenExpires) Marshal() []byte {
 	info, _ := msgpack.Marshal(u)
 	return info
 }
 
-func (u *uidTokenExpires) Unmarshal(content []byte) error {
+func (u *UidTokenExpires) Unmarshal(content []byte) error {
 	return msgpack.Unmarshal(content, u)
 }
 

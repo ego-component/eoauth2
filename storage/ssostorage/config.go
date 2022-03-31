@@ -30,9 +30,9 @@ type config struct {
 					 key: sso:ptk:{parentToken}
 		  			 expiration: 最大的过期时间
 					 value:
-						uid:                   uid
+						uids:                  uids
 						tokenInfo:             tokenInfo
-						expireList:             [{"subTokenClientId1":"ctime"}]
+						expireList:            [{"subTokenClientId1":"ctime"}]
 						expireTime:            最大过期时间
 						{subTokenClientId1}:   tokenJsonInfo
 						{subTokenClientId2}:   tokenJsonInfo
@@ -175,7 +175,7 @@ func (u *uidMapParentToken) setToken(ctx context.Context, uid int64, platform st
 		return err
 	}
 	nowTime := time.Now().Unix()
-	newExpireTimeList := make(uidTokenExpires, 0)
+	newExpireTimeList := make(UidTokenExpires, 0)
 	// 新数据添加到队列前面，这样方便后续清除数据，或者对数据做一些限制
 	newExpireTimeList = append(newExpireTimeList, uidTokenExpire{
 		Token:      fieldKey,
@@ -233,7 +233,7 @@ func (u *uidMapParentToken) setToken(ctx context.Context, uid int64, platform st
 }
 
 // 获取过期时间，最新的在最前面。
-func (u *uidMapParentToken) getExpireTimeList(ctx context.Context, uid int64) (userInfo uidTokenExpires, err error) {
+func (u *uidMapParentToken) getExpireTimeList(ctx context.Context, uid int64) (userInfo UidTokenExpires, err error) {
 	// 根据父节点token，获取用户信息
 	infoBytes, err := u.redis.Client().HGet(ctx, u.getKey(uid), u.hashExpireTimeList).Bytes()
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -273,7 +273,6 @@ type parentToken struct {
 	redis              *eredis.Component
 	hashKeyCtime       string
 	hashKeyUids        string
-	hashKeyPlatform    string
 	hashExpireTimeList string
 	hashKeyUidInfo     string
 }
@@ -283,7 +282,6 @@ func newParentToken(config *config, redis *eredis.Component) *parentToken {
 		config:             config,
 		redis:              redis,
 		hashKeyCtime:       "_c",     // create time
-		hashKeyPlatform:    "_p",     // 类型
 		hashKeyUids:        "_u",     // uid
 		hashKeyUidInfo:     "_ui:%d", // uid info
 		hashExpireTimeList: "_etl",   // expire time List
@@ -376,15 +374,16 @@ func (p *parentToken) getUids(ctx context.Context, pToken string) (uids UidsStor
 	return
 }
 
-func (p *parentToken) getUid(ctx context.Context, pToken string) (uid int64, err error) {
-	// 根据父节点token，获取用户信息
-	uid, err = p.redis.Client().HGet(ctx, p.getKey(pToken), p.hashKeyUids).Int64()
-	if err != nil {
-		err = fmt.Errorf("parentToken getUid failed, err: %w", err)
-		return
-	}
-	return
-}
+//
+//func (p *parentToken) getUid(ctx context.Context, pToken string) (uid int64, err error) {
+//	// 根据父节点token，获取用户信息
+//	uid, err = p.redis.Client().HGet(ctx, p.getKey(pToken), p.hashKeyUids).Int64()
+//	if err != nil {
+//		err = fmt.Errorf("parentToken getUid failed, err: %w", err)
+//		return
+//	}
+//	return
+//}
 
 func (p *parentToken) setToken(ctx context.Context, pToken string, clientId string, token model.Token) error {
 	expireTimeList, err := p.getExpireTimeList(ctx, pToken)
@@ -398,7 +397,7 @@ func (p *parentToken) setToken(ctx context.Context, pToken string, clientId stri
 	}
 
 	nowTime := time.Now().Unix()
-	newExpireTimeList := make(uidTokenExpires, 0)
+	newExpireTimeList := make(UidTokenExpires, 0)
 	// 新数据添加到队列前面，这样方便后续清除数据，或者对数据做一些限制
 	newExpireTimeList = append(newExpireTimeList, uidTokenExpire{
 		Token:      clientId,
@@ -440,7 +439,7 @@ func (p *parentToken) setToken(ctx context.Context, pToken string, clientId stri
 }
 
 // 获取过期时间，最新的在最前面。
-func (p *parentToken) getExpireTimeList(ctx context.Context, pToken string) (userInfo uidTokenExpires, err error) {
+func (p *parentToken) getExpireTimeList(ctx context.Context, pToken string) (uidTokenInfo UidTokenExpires, err error) {
 	// 根据父节点token，获取用户信息
 	infoBytes, err := p.redis.Client().HGet(ctx, p.getKey(pToken), p.hashExpireTimeList).Bytes()
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -452,7 +451,7 @@ func (p *parentToken) getExpireTimeList(ctx context.Context, pToken string) (use
 		return
 	}
 
-	pUserInfo := &userInfo
+	pUserInfo := &uidTokenInfo
 	err = pUserInfo.Unmarshal(infoBytes)
 	if err != nil {
 		err = fmt.Errorf("parentToken getExpireTimeList json unmarshal error, %w", err)

@@ -5,24 +5,21 @@ import (
 	"fmt"
 
 	"github.com/ego-component/eoauth2/server/model"
-	"github.com/gotomicro/ego-component/eredis"
 )
 
 type tokenServer struct {
-	redis             *eredis.Component
 	uidMapParentToken *uidMapParentToken
 	parentToken       *parentToken
 	subToken          *subToken
 	config            *config
 }
 
-func initTokenServer(config *config, redis *eredis.Component) *tokenServer {
+func initTokenServer(config *config, uidMapParentToken *uidMapParentToken, parentToken *parentToken, subToken *subToken) *tokenServer {
 	return &tokenServer{
 		config:            config,
-		redis:             redis,
-		uidMapParentToken: newUidMapParentToken(config, redis),
-		parentToken:       newParentToken(config, redis),
-		subToken:          newSubToken(config, redis),
+		uidMapParentToken: uidMapParentToken,
+		parentToken:       parentToken,
+		subToken:          subToken,
 	}
 }
 
