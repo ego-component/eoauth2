@@ -3,11 +3,9 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/ego-component/eoauth2/examples/sso-multiple-account/server/pkg/invoker"
 	"github.com/ego-component/eoauth2/server"
-	oauth2dto "github.com/ego-component/eoauth2/storage/dto"
 	"github.com/gin-gonic/gin"
 	"github.com/gotomicro/ego/core/econf"
 	"github.com/gotomicro/ego/server/egin"
@@ -62,23 +60,14 @@ func ServeHttp() *egin.Component {
 }
 
 func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
-	accessToken := oauth2dto.Token{}
-	token, err := c.Cookie(econf.GetString("sso.tokenCookieName"))
-	if err != nil {
-		accessToken = oauth2dto.NewToken(86400 * 7)
-	} else {
-		accessToken.Token = token
-		accessToken.AuthAt = time.Now().Unix()
-		accessToken.ExpiresIn = 86400 * 7
-	}
-
-	err = ar.Build(
+	token, _ := c.Cookie(econf.GetString("sso.tokenCookieName"))
+	err := ar.Build(
 		server.WithAuthorizeRequestAuthorized(true),
-		server.WithSsoData(server.SsoData{
-			ParentToken: accessToken,
-			Uid:         uid,
-			Platform:    "web",
-		}),
+		server.WithAuthorizeSsoUid(uid),
+		server.WithAuthorizeSsoParentToken(token),
+		server.WithAuthorizeSsoPlatform("web"),
+		server.WithAuthorizeSsoClientIP(c.ClientIP()),
+		server.WithAuthorizeSsoUA(c.GetHeader("User-Agent")),
 	)
 
 	if err != nil {
@@ -96,7 +85,7 @@ func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
 	}
 
 	// 种上单点登录cookie
-	c.SetCookie(econf.GetString("sso.tokenCookieName"), accessToken.Token, int(accessToken.ExpiresIn), "/", econf.GetString("sso.tokenDomain"), econf.GetBool("sso.tokenSecure"), true)
+	c.SetCookie(econf.GetString("sso.tokenCookieName"), ar.GetParentToken().Token, int(ar.GetParentToken().ExpiresIn), "/", econf.GetString("sso.tokenDomain"), econf.GetBool("sso.tokenSecure"), true)
 	c.Redirect(302, redirectUri)
 }
 

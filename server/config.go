@@ -5,9 +5,11 @@ const PackageName = "component.eoauth2.server"
 // Config contains server configuration information
 type Config struct {
 	EnableAccessInterceptor bool                  // 是否开启，记录请求数据
-	AuthorizationExpiration int32                 // Authorization token expiration in seconds (default 5 minutes)
-	AccessExpiration        int32                 // Access token expiration in seconds (default 1 hour)
-	TokenType               string                // ParentToken type to return
+	EnableMultipleAccount   bool                  // 是否启用多账号
+	AuthorizationExpiration int64                 // Authorization token expiration in seconds (default 5 minutes)
+	TokenExpiration         int64                 // Sub Token expiration in seconds (default 1 day)
+	TokenType               string                // Token type to return
+	ParentTokenExpiration   int64                 // Parent Token expiration
 	AllowedAuthorizeTypes   AllowedAuthorizeTypes // List of allowed authorize types (only CODE by default)
 	AllowedAccessTypes      AllowedAccessTypes    // List of allowed access types (only AUTHORIZATION_CODE by default)
 	// HTTP status code to return for errors - default 200
@@ -27,15 +29,14 @@ type Config struct {
 	// refresh token for re-use - default false
 	RetainTokenAfterRefresh bool
 	storage                 Storage
-	authorizeTokenGen       AuthorizeTokenGen
-	accessTokenGen          AccessTokenGen
 }
 
 // DefaultConfig ...
 func DefaultConfig() *Config {
 	return &Config{
 		AuthorizationExpiration:     300,
-		AccessExpiration:            3600,
+		TokenExpiration:             3600 * 24,      // 默认一天
+		ParentTokenExpiration:       3600 * 24 * 30, // 默认30天
 		TokenType:                   "Bearer",
 		AllowedAuthorizeTypes:       AllowedAuthorizeTypes{CODE},
 		AllowedAccessTypes:          AllowedAccessTypes{AUTHORIZATION_CODE, REFRESH_TOKEN},
@@ -45,8 +46,6 @@ func DefaultConfig() *Config {
 		RequirePKCEForPublicClients: false,
 		RedirectUriSeparator:        "",
 		RetainTokenAfterRefresh:     false,
-		authorizeTokenGen:           &AuthorizeTokenGenDefault{},
-		accessTokenGen:              &AccessTokenGenDefault{},
 	}
 }
 

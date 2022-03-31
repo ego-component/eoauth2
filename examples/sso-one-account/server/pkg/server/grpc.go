@@ -32,13 +32,17 @@ func (SsoGrpc) GetToken(ctx context.Context, req *ssov1.GetTokenRequest) (*ssov1
 			},
 		},
 	})
-	err := ar.Build(server.WithAccessRequestAuthorized(true))
+	err := ar.Build(
+		server.WithAccessRequestAuthorized(true),
+		server.WithAccessAuthUA(req.GetClientUA()),
+		server.WithAccessAuthClientIP(req.GetClientIP()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("GetToken error, %w", err)
 	}
 	return &ssov1.GetTokenResponse{
 		Token:     ar.GetOutput("access_token").(string),
-		ExpiresIn: int64(ar.GetOutput("expires_in").(int32)),
+		ExpiresIn: ar.GetOutput("expires_in").(int64),
 	}, nil
 }
 func (SsoGrpc) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenRequest) (resp *ssov1.RefreshTokenResponse, err error) {
@@ -63,7 +67,7 @@ func (SsoGrpc) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenRequest)
 	}
 	resp = &ssov1.RefreshTokenResponse{
 		Token:     ar.GetOutput("access_token").(string),
-		ExpiresIn: int64(ar.GetOutput("expires_in").(int32)),
+		ExpiresIn: ar.GetOutput("expires_in").(int64),
 	}
 	return resp, nil
 }

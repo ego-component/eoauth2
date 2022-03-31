@@ -2,12 +2,15 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
 	"time"
 
+	"github.com/ego-component/eoauth2/server/model"
 	"github.com/gotomicro/ego/core/elog"
+	"github.com/pborman/uuid"
 )
 
 // Component ...
@@ -46,10 +49,9 @@ func (c *Component) HandleAuthorizeRequest(ctx context.Context, param AuthorizeR
 			logger: c.logger,
 			output: make(ResponseData),
 		},
-		storage:           c.config.storage,
-		accessTokenGen:    c.config.accessTokenGen,
-		authorizeTokenGen: c.config.authorizeTokenGen,
-		config:            c.config,
+		storage:               c.config.storage,
+		config:                c.config,
+		ParentTokenExpiration: c.config.ParentTokenExpiration,
 	}
 
 	if c.config.EnableAccessInterceptor {
@@ -147,7 +149,7 @@ func (c *Component) HandleAuthorizeRequest(ctx context.Context, param AuthorizeR
 		}
 	case TOKEN:
 		ret.Type = TOKEN
-		ret.Expiration = c.config.AccessExpiration
+		ret.Expiration = c.config.TokenExpiration
 	}
 	return ret
 
@@ -184,7 +186,7 @@ func (r *AuthorizeRequest) Build(options ...AuthorizeRequestOption) error {
 			Scope:           r.Scope,
 			GenerateRefresh: false, // per the RFC, should NOT generate a refresh token in this case
 			authorized:      true,
-			Expiration:      r.Expiration,
+			TokenExpiration: r.Expiration,
 			userData:        r.userData,
 			Context:         r.Context,
 			config:          r.config,
@@ -194,32 +196,30 @@ func (r *AuthorizeRequest) Build(options ...AuthorizeRequestOption) error {
 		return nil
 	}
 
+	// 根据可选参数，生成sso data数据
+	r.generateSsoData()
 	// 已验证过
 	// generate authorization token
 	ret := &AuthorizeData{
-		Client:      r.Client,
-		CreatedAt:   time.Now(),
-		ExpiresIn:   r.Expiration,
-		RedirectUri: r.redirectUri,
-		State:       r.State,
-		Scope:       r.Scope,
-		UserData:    r.userData,
+		Client:               r.Client,
+		CreatedAt:            time.Now(),
+		ExpiresIn:            r.Expiration,
+		ParentTokenExpiresIn: r.ParentTokenExpiration,
+		RedirectUri:          r.redirectUri,
+		State:                r.State,
+		Scope:                r.Scope,
+		UserData:             r.userData,
 		// Optional PKCE challenge
 		CodeChallenge:       r.CodeChallenge,
 		CodeChallengeMethod: r.CodeChallengeMethod,
 		Context:             r.Context,
 		storage:             r.storage,
-		authorizeTokenGen:   r.authorizeTokenGen,
 		SsoData:             r.ssoData,
 	}
 
+	var err error
 	// generate token code
-	code, err := ret.authorizeTokenGen.GenerateAuthorizeToken(ret)
-	if err != nil {
-		ret.setError(E_SERVER_ERROR, err, "AuthorizeRequestBuild", "GenerateAuthorizeToken invalid")
-		return fmt.Errorf("Build error3, err %w", r.responseErr)
-	}
-	ret.Code = code
+	ret.Code = base64.RawURLEncoding.EncodeToString(uuid.NewRandom())
 
 	// save authorization token
 	if err = ret.storage.SaveAuthorize(r.Ctx, ret); err != nil {
@@ -227,10 +227,29 @@ func (r *AuthorizeRequest) Build(options ...AuthorizeRequestOption) error {
 		return fmt.Errorf("Build error4, err %w", r.responseErr)
 	}
 
+	r.setParentToken(ret.SsoData.Token)
 	// redirect with code
 	r.SetOutput("code", ret.Code)
 	r.SetOutput("state", ret.State)
 	return nil
+}
+
+func (r *AuthorizeRequest) generateSsoData() {
+	ssoParentToken := model.NewToken(r.ParentTokenExpiration)
+	// 如果自己设置了sso ptoken，那么使用用户定义的，因为可能是多账号登录
+	if r.ssoParentToken != "" {
+		ssoParentToken.Token = r.ssoParentToken
+	}
+	r.ssoData = model.ParentToken{
+		Token: ssoParentToken,
+		StoreData: model.ParentTokenData{
+			Uid:      r.ssoUid,
+			Platform: r.ssoPlatform,
+			ClientIP: r.ssoClientIP,
+			UA:       r.ssoUA,
+		},
+	}
+
 }
 
 type ParamAccessRequest struct {

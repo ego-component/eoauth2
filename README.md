@@ -175,6 +175,18 @@ ego.New().Serve(func() *egin.Component {
 * 刷新token
     * save access token
     * remove previous access token
+
+## SSO配置说明
+```makefile
+获取parent token信息
+hgetall sso:ptk:_xryboGNQU-490RpAOBMYQ
+
+获取sub token信息
+hgetall sso:stk:n3lgZ-jbR9OlVAfQxh2Hnw
+
+获取uid信息
+hgetall sso:uid:1
+```
     
 ### 文献
 * https://blog.lishunyang.com/2020/05/sso-summary.html

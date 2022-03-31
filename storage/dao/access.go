@@ -14,7 +14,7 @@ type Access struct {
 	Previous     string `gorm:"not null;default:'';" json:"previous"`                // previous
 	AccessToken  string `gorm:"not null;default:'';" json:"accessToken"`             // access_token
 	RefreshToken string `gorm:"not null;default:'';" json:"refreshToken"`            // refresh_token
-	ExpiresIn    int    `gorm:"not null;default:0;comment:过期时间" json:"expiresIn"`    // expires_in
+	ExpiresIn    int64  `gorm:"not null;default:0;comment:过期时间" json:"expiresIn"`    // expires_in
 	Scope        string `gorm:"not null;default:'';comment:作用域" json:"scope"`        // scope
 	RedirectUri  string `gorm:"not null;default:'';comment:跳转地址" json:"redirectUri"` // redirect_uri
 	Extra        string `gorm:"not null;type:longtext;comment:额外信息" json:"extra"`    // extra

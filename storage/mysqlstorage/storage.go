@@ -9,21 +9,18 @@ import (
 	"github.com/ego-component/eoauth2/server"
 	"github.com/ego-component/eoauth2/storage/dao"
 	"github.com/gotomicro/ego-component/egorm"
-	"github.com/gotomicro/ego/core/elog"
 	"github.com/spf13/cast"
 	"gorm.io/gorm"
 )
 
 type storage struct {
-	db     *egorm.Component
-	logger *elog.Component
+	db *egorm.Component
 }
 
 // NewStorage returns a new mysql storage instance.
-func NewStorage(db *gorm.DB, logger *elog.Component) *storage {
+func NewStorage(db *gorm.DB) *storage {
 	return &storage{
 		db,
-		logger,
 	}
 }
 
@@ -165,7 +162,7 @@ func (s *storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 		Previous:     prev,
 		AccessToken:  data.AccessToken,
 		RefreshToken: data.RefreshToken,
-		ExpiresIn:    int(data.ExpiresIn),
+		ExpiresIn:    data.TokenExpiresIn,
 		Scope:        data.Scope,
 		RedirectUri:  data.RedirectUri,
 		Ctime:        data.CreatedAt.Unix(),
@@ -213,7 +210,7 @@ func (s *storage) LoadAccess(ctx context.Context, code string) (*server.AccessDa
 
 	result.AccessToken = info.AccessToken
 	result.RefreshToken = info.RefreshToken
-	result.ExpiresIn = int32(info.ExpiresIn)
+	result.TokenExpiresIn = info.ExpiresIn
 	result.Scope = info.Scope
 	result.RedirectUri = info.RedirectUri
 	result.CreatedAt = time.Unix(info.Ctime, 0)

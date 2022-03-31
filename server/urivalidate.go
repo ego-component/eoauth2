@@ -18,22 +18,22 @@ func newUriValidationError(msg string, base string, redirect string) UriValidati
 	return UriValidationError(fmt.Sprintf("%s: %s / %s", msg, base, redirect))
 }
 
-// Parse urls, resolving uri references to base url
+// Parse urls, resolving uri references to base redirectUrl
 func ParseUrls(baseUrl, redirectUrl string) (retBaseUrl, retRedirectUrl *url.URL, err error) {
 	var base, redirect *url.URL
-	// parse base url
+	// parse base redirectUrl
 	if base, err = url.Parse(baseUrl); err != nil {
 		return nil, nil, err
 	}
 
-	// parse redirect url
+	// parse redirect redirectUrl
 	if redirect, err = url.Parse(redirectUrl); err != nil {
 		return nil, nil, err
 	}
 
 	// must not have fragment
 	if base.Fragment != "" || redirect.Fragment != "" {
-		return nil, nil, newUriValidationError("url must not include fragment.", baseUrl, redirectUrl)
+		return nil, nil, newUriValidationError("redirectUrl must not include fragment.", baseUrl, redirectUrl)
 	}
 
 	// Scheme must match
@@ -46,7 +46,7 @@ func ParseUrls(baseUrl, redirectUrl string) (retBaseUrl, retRedirectUrl *url.URL
 		return nil, nil, newUriValidationError("host mismatch", baseUrl, redirectUrl)
 	}
 
-	// resolve references to base url
+	// resolve references to base redirectUrl
 	retBaseUrl = (&url.URL{Scheme: base.Scheme, Host: base.Host, Path: "/"}).ResolveReference(&url.URL{Path: base.Path})
 	retRedirectUrl = (&url.URL{Scheme: base.Scheme, Host: base.Host, Path: "/"}).ResolveReference(&url.URL{Path: redirect.Path, RawQuery: redirect.RawQuery})
 	return

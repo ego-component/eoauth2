@@ -21,6 +21,8 @@ message GetTokenRequest {
   string code = 1;
   // 按照oauth2规范，编码client id client secret，传递数据， Authorization: Basic xxxx==
   string authorization = 2;
+  string clientIP = 3;
+  string clientUA = 4;
 }
 
 // 获取Access的响应
@@ -37,6 +39,8 @@ message RefreshTokenRequest {
   string code = 1;
   // 按照oauth2规范，编码client id client secret，传递数据， Authorization: Basic xxxx==
   string authorization = 2;
+  string clientIP = 3;
+  string clientUA = 4;
 }
 
 // 获取Access的响应

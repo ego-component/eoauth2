@@ -12,7 +12,7 @@ type Authorize struct {
 	Id          int    `gorm:"not null;primary_key;AUTO_INCREMENT" json:"id"`       // FormID
 	Client      string `gorm:"not null;default:'';comment:客户端" json:"client"`       // 客户端
 	Code        string `gorm:"not null;default:'';comment:CODE码" json:"code"`       // CODE码
-	ExpiresIn   int32  `gorm:"not null;default:0;comment:过期时间" json:"expiresIn"`    // 过期时间
+	ExpiresIn   int64  `gorm:"not null;default:0;comment:过期时间" json:"expiresIn"`    // 过期时间
 	Scope       string `gorm:"not null;default:'';comment:范围" json:"scope"`         // 范围
 	RedirectUri string `gorm:"not null;default:'';comment:跳转地址" json:"redirectUri"` // 跳转地址
 	State       string `gorm:"not null;default:'';comment:状态" json:"state"`         // 状态

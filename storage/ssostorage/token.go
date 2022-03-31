@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ego-component/eoauth2/storage/dto"
+	"github.com/ego-component/eoauth2/server/model"
 	"github.com/gotomicro/ego-component/eredis"
 )
 
@@ -27,18 +27,18 @@ func initTokenServer(config *config, redis *eredis.Component) *tokenServer {
 }
 
 // createParentToken sso的父节点token
-func (t *tokenServer) createParentToken(ctx context.Context, pToken dto.Token, uid int64, platform string) (err error) {
+func (t *tokenServer) createParentToken(ctx context.Context, ssoData model.ParentToken) (err error) {
 	// 1 设置uid 到 parent token关系
-	err = t.uidMapParentToken.setToken(ctx, uid, platform, pToken)
+	err = t.uidMapParentToken.setToken(ctx, ssoData.StoreData.Uid, ssoData.StoreData.Platform, ssoData.Token)
 	if err != nil {
 		return fmt.Errorf("token.createParentToken: create token map failed, err:%w", err)
 	}
 
 	// 2 创建父级的token信息
-	return t.parentToken.create(ctx, pToken, platform, uid)
+	return t.parentToken.create(ctx, ssoData)
 }
 
-func (t *tokenServer) renewParentToken(ctx context.Context, pToken dto.Token) (err error) {
+func (t *tokenServer) renewParentToken(ctx context.Context, pToken model.Token) (err error) {
 	// 1 设置uid 到 parent token关系
 	err = t.parentToken.renew(ctx, pToken)
 	if err != nil {
@@ -48,8 +48,8 @@ func (t *tokenServer) renewParentToken(ctx context.Context, pToken dto.Token) (e
 }
 
 // createToken 创建TOKEN信息，并且存入access信息
-func (t *tokenServer) createToken(ctx context.Context, clientId string, token dto.Token, pToken string, storeData *accessData) (err error) {
-	err = t.parentToken.setToken(ctx, pToken, clientId, token)
+func (t *tokenServer) createToken(ctx context.Context, clientId string, token model.SubToken, pToken string, storeData *accessData) (err error) {
+	err = t.parentToken.setToken(ctx, pToken, clientId, token.Token)
 	if err != nil {
 		return fmt.Errorf("tokenServer.createToken failed, err:%w", err)
 	}

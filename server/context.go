@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/ego-component/eoauth2/server/model"
 	"github.com/gotomicro/ego/core/elog"
 	"go.uber.org/zap"
 )
@@ -21,29 +22,30 @@ const (
 type Context struct {
 	Ctx                context.Context
 	responseType       ResponseType
-	url                string
-	responseErr        error // 用户响应错误
-	internalErr        error // 用户内部错粗
+	redirectUrl        string // 跳转地址
+	responseErr        error  // 用户响应错误
+	internalErr        error  // 用户内部错粗
 	isError            bool
 	redirectInFragment bool
 	logger             *elog.Component
 	output             ResponseData
+	parentToken        model.Token // output会被设置到URL，自动生成的parent token，只能单独存储
 }
 
-// setRedirect changes the response to redirect to the given url
-func (c *Context) setRedirect(url string) {
+// setRedirect changes the response to redirect to the given redirectUrl
+func (c *Context) setRedirect(redirectUrl string) {
 	// set redirect parameters
 	c.responseType = REDIRECT
-	c.url = url
+	c.redirectUrl = redirectUrl
 }
 
-// GetRedirectUrl returns the redirect url with all query string parameters
+// GetRedirectUrl returns the redirect redirectUrl with all query string parameters
 func (c *Context) GetRedirectUrl() (string, error) {
 	if c.responseType != REDIRECT {
 		return "", errors.New("Not a redirect response")
 	}
 
-	u, err := url.Parse(c.url)
+	u, err := url.Parse(c.redirectUrl)
 	if err != nil {
 		return "", err
 	}
@@ -64,7 +66,7 @@ func (c *Context) GetRedirectUrl() (string, error) {
 
 	// https://tools.ietf.org/html/rfc6749#section-4.2.2
 	// Fragment should be encoded as application/x-www-form-urlencoded (%-escaped, spaces are represented as '+')
-	// The stdlib url#String() doesn't make that easy to accomplish, so build this ourselves
+	// The stdlib redirectUrl#String() doesn't make that easy to accomplish, so build this ourselves
 	if c.redirectInFragment {
 		u.Fragment = ""
 		redirectURI := u.String() + "#" + q.Encode()
@@ -75,6 +77,14 @@ func (c *Context) GetRedirectUrl() (string, error) {
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 	return u.String(), nil
+}
+
+func (c *Context) setParentToken(token model.Token) {
+	c.parentToken = token
+}
+
+func (c *Context) GetParentToken() model.Token {
+	return c.parentToken
 }
 
 func (c *Context) SetOutput(key string, value interface{}) {

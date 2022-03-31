@@ -7,13 +7,12 @@ import (
 	"time"
 
 	"github.com/ego-component/eoauth2/server"
+	"github.com/ego-component/eoauth2/server/model"
 	"github.com/ego-component/eoauth2/storage/dao"
-	"github.com/ego-component/eoauth2/storage/dto"
 	"github.com/go-redis/redis/v8"
 	"github.com/gotomicro/ego-component/egorm"
 	"github.com/gotomicro/ego-component/eredis"
 	"github.com/gotomicro/ego/core/elog"
-	"github.com/spf13/cast"
 )
 
 type Storage struct {
@@ -103,21 +102,21 @@ func (s *Storage) SaveAuthorize(ctx context.Context, data *server.AuthorizeData)
 	store := &authorizeData{
 		ClientId:    data.Client.GetId(),
 		Code:        data.Code,
-		Ptoken:      data.SsoData.ParentToken.Token,
+		Ptoken:      data.SsoData.Token.Token,
 		ExpiresIn:   data.ExpiresIn,
 		Scope:       data.Scope,
 		RedirectUri: data.RedirectUri,
 		State:       data.State,
 		Ctime:       data.CreatedAt.Unix(),
-		Extra:       cast.ToString(data.UserData),
 	}
 	err = s.redis.SetEX(ctx, fmt.Sprintf(s.config.storeAuthorizeKey, data.Code), store.Marshal(), time.Duration(data.ExpiresIn)*time.Second)
 	if err != nil {
 		err = fmt.Errorf("sso storage SaveAuthorize failed, err: %w", err)
 		return
 	}
+
 	// 创建父级Token
-	err = s.tokenServer.createParentToken(ctx, data.SsoData.ParentToken, data.SsoData.Uid, data.SsoData.Platform)
+	err = s.tokenServer.createParentToken(ctx, data.SsoData)
 	if err != nil {
 		err = fmt.Errorf("sso storage SaveAuthorize createParentToken failed, err: %w", err)
 		return
@@ -148,7 +147,6 @@ func (s *Storage) LoadAuthorize(ctx context.Context, code string) (*server.Autho
 		RedirectUri: info.RedirectUri,
 		State:       info.State,
 		CreatedAt:   time.Unix(info.Ctime, 0),
-		UserData:    info.Extra,
 	}
 	c, err := s.GetClient(ctx, info.ClientId)
 	if err != nil {
@@ -225,23 +223,17 @@ func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 	}
 
 	storeData := &accessData{
-		ClientId: data.Client.GetId(),
-		//Authorize:    authorizeDataInfo.Code,
+		ClientId:    data.Client.GetId(),
 		Previous:    prevToken,
 		AccessToken: data.AccessToken,
-		//RefreshToken: data.RefreshToken,
-		ExpiresIn:   data.ExpiresIn,
+		ExpiresIn:   data.TokenExpiresIn,
 		Scope:       data.Scope,
 		RedirectUri: data.RedirectUri,
 		Ctime:       data.CreatedAt.Unix(),
 	}
 
 	// 单点登录下，refresh token，其实可以不需要，因为
-	err = s.tokenServer.createToken(ctx, data.Client.GetId(), dto.Token{
-		Token:     data.AccessToken,
-		AuthAt:    time.Now().Unix(),
-		ExpiresIn: s.config.parentAccessExpiration,
-	}, pToken, storeData)
+	err = s.tokenServer.createToken(ctx, data.Client.GetId(), data.TokenData, pToken, storeData)
 	if err != nil {
 		return fmt.Errorf("设置redis token失败, err:%w", err)
 	}
@@ -260,7 +252,7 @@ func (s *Storage) LoadAccess(ctx context.Context, token string) (*server.AccessD
 
 	result.AccessToken = info.AccessToken
 	//result.RefreshToken = info.RefreshToken
-	result.ExpiresIn = info.ExpiresIn
+	result.TokenExpiresIn = info.ExpiresIn
 	result.Scope = info.Scope
 	result.RedirectUri = info.RedirectUri
 	result.CreatedAt = time.Unix(info.Ctime, 0)
@@ -339,7 +331,7 @@ func (s *Storage) GetUidsByToken(ctx context.Context, token string) (uid []int64
 }
 
 // RenewParentToken 续期父级token
-func (s *Storage) RenewParentToken(ctx context.Context, pToken dto.Token) (err error) {
+func (s *Storage) RenewParentToken(ctx context.Context, pToken model.Token) (err error) {
 	return s.tokenServer.renewParentToken(ctx, pToken)
 }
 

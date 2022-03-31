@@ -41,11 +41,10 @@ type authorizeData struct {
 	ClientId    string `msgpack:"id"`   // 客户端ID
 	Code        string `msgpack:"code"` // Code
 	Ptoken      string `msgpack:"pt"`   // Parent ParentToken
-	ExpiresIn   int32  `msgpack:"ei"`   // 过期时间
+	ExpiresIn   int64  `msgpack:"ei"`   // 过期时间
 	Scope       string `msgpack:"s"`    // 范围
 	RedirectUri string `msgpack:"r"`    // 跳转地址
 	State       string `msgpack:"s"`    // 状态
-	Extra       string `msgpack:"ex"`   // 额外信息
 	Ctime       int64  `msgpack:"ct"`   // 创建时间
 }
 
@@ -59,12 +58,10 @@ func (u *authorizeData) Unmarshal(content []byte) error {
 }
 
 type accessData struct {
-	ClientId string `msgpack:"id"` // 客户端ID
-	//Authorize    string `msgpack:"au"` // Authorize
+	ClientId    string `msgpack:"id"` // 客户端ID
 	Previous    string `msgpack:"pr"` // Parent ParentToken
 	AccessToken string `msgpack:"at"` // Parent ParentToken
-	//RefreshToken string `msgpack:"rt"` // Parent ParentToken
-	ExpiresIn   int32  `msgpack:"ei"` // 过期时间
+	ExpiresIn   int64  `msgpack:"ei"` // 过期时间
 	Scope       string `msgpack:"s"`  // 范围
 	RedirectUri string `msgpack:"r"`  // 跳转地址
 	Ctime       int64  `msgpack:"ct"` // 创建时间
@@ -87,19 +84,5 @@ func (u UidsStore) Marshal() []byte {
 }
 
 func (u *UidsStore) Unmarshal(content []byte) error {
-	return msgpack.Unmarshal(content, u)
-}
-
-type UidInfoStore struct {
-	Platform string `msgpack:"p"`
-	Ctime    int64  `msgpack:"c"`
-}
-
-func (u UidInfoStore) Marshal() []byte {
-	info, _ := msgpack.Marshal(u)
-	return info
-}
-
-func (u *UidInfoStore) Unmarshal(content []byte) error {
 	return msgpack.Unmarshal(content, u)
 }

@@ -20,12 +20,6 @@ func WithSubTokenMapParentTokenKey(key string) Option {
 	}
 }
 
-func WithParentAccessExpiration(key int64) Option {
-	return func(c *Storage) {
-		c.config.parentAccessExpiration = key
-	}
-}
-
 func WithEnableMultipleAccounts(flag bool) Option {
 	return func(c *Storage) {
 		c.config.enableMultipleAccounts = flag

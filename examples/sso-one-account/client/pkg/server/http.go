@@ -130,6 +130,8 @@ func ServeHttp() *egin.Component {
 		accessInfo, err := invoker.SsoGrpc.GetToken(newCtx, &ssov1.GetTokenRequest{
 			Code:          code,
 			Authorization: "Basic " + basicAuth(invoker.OauthConfig.ClientId, invoker.OauthConfig.ClientSecret),
+			ClientIP:      ctx.ClientIP(),
+			ClientUA:      ctx.GetHeader("User-Agent"),
 		})
 		if err != nil {
 			ctx.JSON(401, "获取access token信息失败"+err.Error())

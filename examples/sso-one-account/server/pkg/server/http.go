@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ego-component/eoauth2/examples/sso-multiple-account/server/pkg/invoker"
+	"github.com/ego-component/eoauth2/examples/sso-one-account/server/pkg/invoker"
 	"github.com/ego-component/eoauth2/server"
-	oauth2dto "github.com/ego-component/eoauth2/storage/dto"
 	"github.com/gin-gonic/gin"
 	"github.com/gotomicro/ego/core/econf"
 	"github.com/gotomicro/ego/server/egin"
@@ -100,15 +99,13 @@ func checkToken() gin.HandlerFunc {
 }
 
 func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
-	accessToken := oauth2dto.NewToken(86400 * 7)
 	err := ar.Build(
 		server.WithAuthorizeRequestAuthorized(true),
 		server.WithAuthorizeRequestUserData(`{"uid"":1,"nickname":"askuy"}`),
-		server.WithSsoData(server.SsoData{
-			ParentToken: accessToken,
-			Uid:         uid,
-			Platform:    "web",
-		}),
+		server.WithAuthorizeSsoUid(1),
+		server.WithAuthorizeSsoPlatform("web"),
+		server.WithAuthorizeSsoClientIP(c.ClientIP()),
+		server.WithAuthorizeSsoUA(c.GetHeader("User-Agent")),
 	)
 
 	if err != nil {
@@ -126,7 +123,7 @@ func ssoServer(c *gin.Context, ar *server.AuthorizeRequest, uid int64) {
 	}
 
 	// 种上单点登录cookie
-	c.SetCookie(econf.GetString("sso.tokenCookieName"), accessToken.Token, int(accessToken.ExpiresIn), "/", econf.GetString("sso.tokenDomain"), econf.GetBool("sso.tokenSecure"), true)
+	c.SetCookie(econf.GetString("sso.tokenCookieName"), ar.GetParentToken().Token, int(ar.GetParentToken().ExpiresIn), "/", econf.GetString("sso.tokenDomain"), econf.GetBool("sso.tokenSecure"), true)
 	c.Redirect(302, redirectUri)
 }
 

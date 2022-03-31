@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/ego-component/eoauth2/server/model"
 )
 
 // AccessRequestType is the type for OAuth param `grant_type`
@@ -31,24 +33,26 @@ type AccessRequest struct {
 	AccessData    *AccessData
 
 	// Force finish to use this access data, to allow access data reuse
-	ForceAccessData *AccessData
-	RedirectUri     string
-	Scope           string
-	Username        string
-	Password        string
-	AssertionType   string
-	Assertion       string
-	authorized      bool        // Set if request is authorized
-	userData        interface{} // Data to be passed to storage. Not used by the library.
-	Expiration      int32       // ParentToken expiration in seconds. Change if different from default
-
+	ForceAccessData       *AccessData
+	RedirectUri           string
+	Scope                 string
+	Username              string
+	Password              string
+	AssertionType         string
+	Assertion             string
+	authorized            bool        // Set if request is authorized
+	userData              interface{} // Data to be passed to storage. Not used by the library.
+	TokenExpiration       int64       // Token expiration in seconds. Change if different from default
+	ParentTokenExpiration int64
 	// Set if a refresh token should be generated
 	GenerateRefresh bool
 
 	// Optional code_verifier as described in rfc7636
 	CodeVerifier string
 	*Context
-	config *Config
+	config       *Config
+	authUA       string
+	authClientIP string
 }
 
 // ResponseData for response output
@@ -76,7 +80,8 @@ func (ar *AccessRequest) handleAuthorizationCodeRequest(ctx context.Context, par
 	ar.CodeVerifier = param.CodeVerifier
 	ar.RedirectUri = param.RedirectUri
 	ar.GenerateRefresh = true
-	ar.Expiration = ar.config.AccessExpiration
+	ar.TokenExpiration = ar.config.TokenExpiration
+	ar.ParentTokenExpiration = ar.config.ParentTokenExpiration
 
 	// "code" is required
 	if ar.Code == "" {
@@ -179,7 +184,7 @@ func (ar *AccessRequest) handleRefreshTokenRequest(ctx context.Context, param Ac
 	ar.Code = param.Code
 	ar.Scope = param.Scope
 	ar.GenerateRefresh = true
-	ar.Expiration = ar.config.AccessExpiration
+	ar.TokenExpiration = ar.config.TokenExpiration
 
 	// "refresh_token" is required
 	if ar.Code == "" {
@@ -321,8 +326,10 @@ type AccessData struct {
 	// Refresh ParentToken. Can be blank
 	RefreshToken string
 
-	// ParentToken expiration in seconds
-	ExpiresIn int32
+	// Token expiration in seconds
+	TokenExpiresIn int64
+	// Token expiration in seconds
+	ParentTokenExpiresIn int64
 
 	// Requested scope
 	Scope string
@@ -335,6 +342,9 @@ type AccessData struct {
 
 	// Data to be passed to storage. Not used by the library.
 	UserData interface{}
+
+	// 存储TOKEN的一些元数据，用于后台查询用户情况
+	TokenData model.SubToken
 }
 
 // IsExpired returns true if access expired
@@ -349,13 +359,13 @@ func (d *AccessData) IsExpiredAt(t time.Time) bool {
 
 // ExpireAt returns the expiration date
 func (d *AccessData) ExpireAt() time.Time {
-	return d.CreatedAt.Add(time.Duration(d.ExpiresIn) * time.Second)
+	return d.CreatedAt.Add(time.Duration(d.TokenExpiresIn) * time.Second)
 }
 
 // AccessTokenGen generates access tokens
-type AccessTokenGen interface {
-	GenerateAccessToken(data *AccessData, generaterefresh bool) (accesstoken string, refreshtoken string, err error)
-}
+//type AccessTokenGen interface {
+//	GenerateAccessToken(data *AccessData, generaterefresh bool) (accesstoken string, refreshtoken string, err error)
+//}
 
 // Build ...
 func (ar *AccessRequest) Build(options ...AccessRequestOption) error {
@@ -384,18 +394,32 @@ func (ar *AccessRequest) Build(options ...AccessRequestOption) error {
 	if ar.ForceAccessData == nil {
 		// generate access token
 		ret = &AccessData{
-			Client:        ar.Client,
-			AuthorizeData: ar.AuthorizeData,
-			AccessData:    ar.AccessData,
-			RedirectUri:   redirectUri,
-			CreatedAt:     time.Now(),
-			ExpiresIn:     ar.Expiration,
-			UserData:      ar.userData,
-			Scope:         ar.Scope,
+			Client:               ar.Client,
+			AuthorizeData:        ar.AuthorizeData,
+			AccessData:           ar.AccessData,
+			RedirectUri:          redirectUri,
+			CreatedAt:            time.Now(),
+			TokenExpiresIn:       ar.TokenExpiration,
+			ParentTokenExpiresIn: ar.ParentTokenExpiration,
+			UserData:             ar.userData,
+			Scope:                ar.Scope,
 		}
 
 		// generate access token
-		ret.AccessToken, ret.RefreshToken, err = ar.config.accessTokenGen.GenerateAccessToken(ret, ar.GenerateRefresh)
+		ret.TokenData = model.SubToken{
+			Token: model.NewToken(ar.TokenExpiration),
+			StoreData: model.SubTokenData{
+				UA:       ar.authUA,
+				ClientIP: ar.authClientIP,
+			},
+		}
+
+		ret.AccessToken = ret.TokenData.Token.Token
+		if ar.GenerateRefresh {
+			ret.RefreshToken = model.NewToken(ar.TokenExpiration).Token
+		}
+
+		//ret.AccessToken, ret.RefreshToken, err = ar.config.accessTokenGen.GenerateAccessToken(ret, ar.GenerateRefresh)
 		if err != nil {
 			ar.setError(E_SERVER_ERROR, err, "AccessRequestBuild", "error generating token")
 			return fmt.Errorf("Build error3, err %w", ar.responseErr)
@@ -426,7 +450,7 @@ func (ar *AccessRequest) Build(options ...AccessRequestOption) error {
 	// output data
 	ar.SetOutput("access_token", ret.AccessToken)
 	ar.SetOutput("token_type", ar.config.TokenType)
-	ar.SetOutput("expires_in", ret.ExpiresIn)
+	ar.SetOutput("expires_in", ret.TokenExpiresIn)
 	if ret.RefreshToken != "" {
 		ar.SetOutput("refresh_token", ret.RefreshToken)
 	}

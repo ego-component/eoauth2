@@ -19,7 +19,6 @@ func Init() error {
 	TokenStorage = ssostorage.NewStorage(
 		Db,
 		Redis,
-		ssostorage.WithParentAccessExpiration(86400*7),
 	)
 	SsoComponent = ssoserver.Load("sso").Build(ssoserver.WithStorage(TokenStorage))
 	return nil

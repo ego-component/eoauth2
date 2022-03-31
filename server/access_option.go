@@ -9,3 +9,15 @@ func WithAccessRequestAuthorized(flag bool) AccessRequestOption {
 		c.authorized = flag
 	}
 }
+
+func WithAccessAuthUA(authUA string) AccessRequestOption {
+	return func(c *AccessRequest) {
+		c.authUA = authUA
+	}
+}
+
+func WithAccessAuthClientIP(clientIP string) AccessRequestOption {
+	return func(c *AccessRequest) {
+		c.authClientIP = clientIP
+	}
+}

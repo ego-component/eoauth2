@@ -6,15 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ego-component/eoauth2/storage/dto"
+	"github.com/ego-component/eoauth2/server/model"
 	"github.com/go-redis/redis/v8"
 	"github.com/gotomicro/ego-component/eredis"
 )
 
 type config struct {
-	enableMultipleAccounts bool  // 开启多账号，默认false
-	parentAccessExpiration int64 // 父亲节点token
-
+	enableMultipleAccounts bool // 开启多账号，默认false
 	/*
 		    hashmap
 			key: sso:uid:{uid}
@@ -67,8 +65,6 @@ func defaultConfig() *config {
 		subTokenMapParentTokenKey: "sso:stk:%s",  // sub token map parent token
 		storeClientInfoKey:        "sso:client",  // sso的client信息，使用hash map
 		storeAuthorizeKey:         "sso:auth:%s", // 存储auth信息
-		parentAccessExpiration:    24 * 3600,
-		//platform:                []string{"web", "android", "ios"},
 	}
 }
 
@@ -98,13 +94,14 @@ func (s *subToken) getKey(subToken string) string {
 	return fmt.Sprintf(s.config.subTokenMapParentTokenKey, subToken)
 }
 
-func (s *subToken) create(ctx context.Context, token dto.Token, parentToken string, clientId string, storeData *accessData) error {
-	err := s.redis.HMSet(ctx, s.getKey(token.Token), map[string]interface{}{
+func (s *subToken) create(ctx context.Context, token model.SubToken, parentToken string, clientId string, accessData *accessData) error {
+	err := s.redis.HMSet(ctx, s.getKey(token.Token.Token), map[string]interface{}{
 		s.hashKeyParentToken: parentToken,
 		s.hashKeyClientId:    clientId,
 		s.hashKeyCtime:       time.Now().Unix(),
-		s.hashKeyAccessInfo:  storeData.Marshal(),
-	}, time.Duration(token.ExpiresIn)*time.Second)
+		s.hashKeyAccessInfo:  accessData.Marshal(),
+		s.hashKeyTokenInfo:   token.StoreData.Marshal(),
+	}, time.Duration(token.Token.ExpiresIn)*time.Second)
 	if err != nil {
 		return fmt.Errorf("subToken.create token failed, err:%w", err)
 	}
@@ -166,7 +163,7 @@ func (u *uidMapParentToken) getFieldKey(clientType string, parentToken string) s
 //   expireTimeList:            [{"clientType1|parentToken":"expire的时间戳"}]
 //	 expireTime:                最大过期时间
 
-func (u *uidMapParentToken) setToken(ctx context.Context, uid int64, platform string, pToken dto.Token) error {
+func (u *uidMapParentToken) setToken(ctx context.Context, uid int64, platform string, pToken model.Token) error {
 	fieldKey := u.getFieldKey(platform, pToken.Token)
 
 	expireTime, err := u.getExpireTime(ctx, uid)
@@ -271,16 +268,6 @@ func (u *uidMapParentToken) getExpireTime(ctx context.Context, uid int64) (expir
 	return
 }
 
-//func (u *uidMapParentToken) getParentToken(ctx context.Context, uid int64, clientType string) (resp dto.ParentToken, err error) {
-//	value, err := u.redis.HGet(ctx, u.getKey(uid), clientType)
-//	if err != nil {
-//		err = fmt.Errorf("uidMapParentToken.getParentToken failed, err: %w", err)
-//		return
-//	}
-//	err = json.Unmarshal([]byte(value), &resp)
-//	return
-//}
-
 type parentToken struct {
 	config             *config
 	redis              *eredis.Component
@@ -308,27 +295,23 @@ func (p *parentToken) getKey(pToken string) string {
 	return fmt.Sprintf(p.config.parentTokenMapSubTokenKey, pToken)
 }
 
-func (p *parentToken) create(ctx context.Context, pToken dto.Token, platform string, uid int64) error {
-	userInfo := UidInfoStore{
-		Platform: platform,
-		Ctime:    time.Now().Unix(),
-	}
+func (p *parentToken) create(ctx context.Context, ssoData model.ParentToken) error {
 	// 如果没有开启多账号，那么就是单账号，直接set
 	if !p.config.enableMultipleAccounts {
-		uids := UidsStore{uid}
+		uids := UidsStore{ssoData.StoreData.Uid}
 		uids.Marshal()
-		err := p.redis.HMSet(ctx, p.getKey(pToken.Token), map[string]interface{}{
-			p.hashKeyCtime:                     time.Now().Unix(),
-			p.hashKeyUids:                      uids.Marshal(),
-			fmt.Sprintf(p.hashKeyUidInfo, uid): userInfo.Marshal(),
-		}, time.Duration(pToken.ExpiresIn)*time.Second)
+		err := p.redis.HMSet(ctx, p.getKey(ssoData.Token.Token), map[string]interface{}{
+			p.hashKeyCtime: time.Now().Unix(),
+			p.hashKeyUids:  uids.Marshal(),
+			fmt.Sprintf(p.hashKeyUidInfo, ssoData.StoreData.Uid): ssoData.StoreData.Marshal(),
+		}, time.Duration(ssoData.Token.ExpiresIn)*time.Second)
 		if err != nil {
 			return fmt.Errorf("parentToken.create failed, err:%w", err)
 		}
 		return nil
 	}
 
-	uids, err := p.getUids(ctx, pToken.Token)
+	uids, err := p.getUids(ctx, ssoData.Token.Token)
 	// 系统错误
 	if err != nil && !errors.Is(err, redis.Nil) {
 		return fmt.Errorf("parentToken.create get key empty, err: %w", err)
@@ -336,31 +319,31 @@ func (p *parentToken) create(ctx context.Context, pToken dto.Token, platform str
 
 	// 如果不存在，那么直接set，创建
 	if errors.Is(err, redis.Nil) {
-		uids = UidsStore{uid}
+		uids = UidsStore{ssoData.StoreData.Uid}
 		uids.Marshal()
-		err = p.redis.HMSet(ctx, p.getKey(pToken.Token), map[string]interface{}{
-			p.hashKeyCtime:                     time.Now().Unix(),
-			p.hashKeyUids:                      uids.Marshal(),
-			fmt.Sprintf(p.hashKeyUidInfo, uid): userInfo.Marshal(),
-		}, time.Duration(pToken.ExpiresIn)*time.Second)
+		err = p.redis.HMSet(ctx, p.getKey(ssoData.Token.Token), map[string]interface{}{
+			p.hashKeyCtime: time.Now().Unix(),
+			p.hashKeyUids:  uids.Marshal(),
+			fmt.Sprintf(p.hashKeyUidInfo, ssoData.StoreData.Uid): ssoData.StoreData.Marshal(),
+		}, time.Duration(ssoData.Token.ExpiresIn)*time.Second)
 		if err != nil {
 			return fmt.Errorf("parentToken.create failed, err:%w", err)
 		}
 		return nil
 	}
 	// 如果存在，那么需要取出之前数据，重新写入新的uid信息
-	uids = append(uids, uid)
-	err = p.redis.HMSet(ctx, p.getKey(pToken.Token), map[string]interface{}{
-		p.hashKeyUids:                      uids.Marshal(),
-		fmt.Sprintf(p.hashKeyUidInfo, uid): userInfo.Marshal(),
-	}, time.Duration(pToken.ExpiresIn)*time.Second)
+	uids = append(uids, ssoData.StoreData.Uid)
+	err = p.redis.HMSet(ctx, p.getKey(ssoData.Token.Token), map[string]interface{}{
+		p.hashKeyUids: uids.Marshal(),
+		fmt.Sprintf(p.hashKeyUidInfo, ssoData.StoreData.Uid): ssoData.StoreData.Marshal(),
+	}, time.Duration(ssoData.Token.ExpiresIn)*time.Second)
 	if err != nil {
 		return fmt.Errorf("parentToken.create failed, err:%w", err)
 	}
 	return nil
 }
 
-func (p *parentToken) renew(ctx context.Context, pToken dto.Token) error {
+func (p *parentToken) renew(ctx context.Context, pToken model.Token) error {
 	err := p.redis.Client().Expire(ctx, p.getKey(pToken.Token), time.Duration(pToken.ExpiresIn)*time.Second).Err()
 	if err != nil {
 		return fmt.Errorf("parentToken.renew failed, err:%w", err)
@@ -403,7 +386,7 @@ func (p *parentToken) getUid(ctx context.Context, pToken string) (uid int64, err
 	return
 }
 
-func (p *parentToken) setToken(ctx context.Context, pToken string, clientId string, token dto.Token) error {
+func (p *parentToken) setToken(ctx context.Context, pToken string, clientId string, token model.Token) error {
 	expireTimeList, err := p.getExpireTimeList(ctx, pToken)
 	if err != nil {
 		return err
@@ -478,7 +461,7 @@ func (p *parentToken) getExpireTimeList(ctx context.Context, pToken string) (use
 	return
 }
 
-func (p *parentToken) getToken(ctx context.Context, pToken string, clientId string) (tokenInfo dto.Token, err error) {
+func (p *parentToken) getToken(ctx context.Context, pToken string, clientId string) (tokenInfo model.Token, err error) {
 	tokenValue, err := p.redis.HGet(ctx, p.getKey(pToken), clientId)
 	if err != nil {
 		err = fmt.Errorf("tokgen get redis hmget string error, %w", err)
