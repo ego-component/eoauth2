@@ -58,14 +58,14 @@ func (s *Storage) GetClient(ctx context.Context, clientId string) (c server.Clie
 		return
 	}
 
-	client := &clientInfo{}
+	client := &ClientInfo{}
 	err = client.Unmarshal(infoBytes)
 	if err != nil {
 		err = fmt.Errorf("sso storage GetClient unmarshal failed, err: %w", err)
 		return
 	}
 	info := server.DefaultClient{
-		Id:          client.Id,
+		Id:          client.ClientId,
 		Secret:      client.Secret,
 		RedirectUri: client.RedirectUri,
 	}
@@ -199,13 +199,13 @@ func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 	}
 
 	storeData := &AccessData{
-		ClientId:    data.Client.GetId(),
-		Previous:    prevToken,
-		AccessToken: data.AccessToken,
-		ExpiresIn:   data.TokenExpiresIn,
-		Scope:       data.Scope,
-		RedirectUri: data.RedirectUri,
-		Ctime:       data.CreatedAt.Unix(),
+		ClientId:      data.Client.GetId(),
+		PreviousToken: prevToken,
+		CurrentToken:  data.AccessToken,
+		ExpiresIn:     data.TokenExpiresIn,
+		Scope:         data.Scope,
+		RedirectUri:   data.RedirectUri,
+		Ctime:         data.CreatedAt.Unix(),
 	}
 
 	// 单点登录下，refresh token，其实可以不需要，因为
@@ -226,7 +226,7 @@ func (s *Storage) LoadAccess(ctx context.Context, token string) (*server.AccessD
 		return nil, err
 	}
 
-	result.AccessToken = info.AccessToken
+	result.AccessToken = info.CurrentToken
 	//result.RefreshToken = info.RefreshToken
 	result.TokenExpiresIn = info.ExpiresIn
 	result.Scope = info.Scope
@@ -261,6 +261,5 @@ func (s *Storage) LoadRefresh(ctx context.Context, token string) (*server.Access
 
 // RemoveRefresh revokes or deletes refresh AccessData.
 func (s *Storage) RemoveRefresh(ctx context.Context, code string) (err error) {
-	//err = dao.DeleteRefreshByToken(s.db.WithContext(ctx), code)
 	return
 }

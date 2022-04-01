@@ -8,13 +8,13 @@ import (
 )
 
 type tokenServer struct {
-	uidMapParentToken *uidMapParentToken
+	uidMapParentToken *userToken
 	parentToken       *parentToken
 	subToken          *subToken
 	config            *config
 }
 
-func initTokenServer(config *config, uidMapParentToken *uidMapParentToken, parentToken *parentToken, subToken *subToken) *tokenServer {
+func initTokenServer(config *config, uidMapParentToken *userToken, parentToken *parentToken, subToken *subToken) *tokenServer {
 	return &tokenServer{
 		config:            config,
 		uidMapParentToken: uidMapParentToken,
@@ -26,7 +26,7 @@ func initTokenServer(config *config, uidMapParentToken *uidMapParentToken, paren
 // createParentToken sso的父节点token
 func (t *tokenServer) createParentToken(ctx context.Context, ssoData model.ParentToken) (err error) {
 	// 1 设置uid 到 parent token关系
-	err = t.uidMapParentToken.setToken(ctx, ssoData.Uid, ssoData.StoreData.Platform, ssoData.Token)
+	err = t.uidMapParentToken.setToken(ctx, ssoData.Uid, ssoData.Token)
 	if err != nil {
 		return fmt.Errorf("token.createParentToken: create token map failed, err:%w", err)
 	}
@@ -47,7 +47,7 @@ func (t *tokenServer) createParentToken(ctx context.Context, ssoData model.Paren
 
 // createToken 创建TOKEN信息，并且存入access信息
 func (t *tokenServer) createToken(ctx context.Context, clientId string, token model.SubToken, pToken string, storeData *AccessData) (err error) {
-	err = t.parentToken.setToken(ctx, pToken, clientId, token.Token)
+	err = t.parentToken.setToken(ctx, pToken, token.Token)
 	if err != nil {
 		return fmt.Errorf("tokenServer.createToken failed, err:%w", err)
 	}

@@ -21,19 +21,19 @@ func (u *UserTokenExpires) Unmarshal(content []byte) error {
 	return msgpack.Unmarshal(content, u)
 }
 
-// clientInfo 存储客户端信息
-type clientInfo struct {
-	Id          string `msgpack:"id"`
-	Secret      string `msgpack:"s"`
-	RedirectUri string `msgpack:"r"`
+// ClientInfo 存储客户端信息
+type ClientInfo struct {
+	ClientId    string `msgpack:"id" json:"clientId"`
+	Secret      string `msgpack:"s" json:"secret"`
+	RedirectUri string `msgpack:"r" json:"redirectUri"`
 }
 
-func (u clientInfo) Marshal() []byte {
+func (u ClientInfo) Marshal() []byte {
 	info, _ := msgpack.Marshal(u)
 	return info
 }
 
-func (u *clientInfo) Unmarshal(content []byte) error {
+func (u *ClientInfo) Unmarshal(content []byte) error {
 	return msgpack.Unmarshal(content, u)
 }
 
@@ -58,13 +58,13 @@ func (u *authorizeData) Unmarshal(content []byte) error {
 }
 
 type AccessData struct {
-	ClientId    string `msgpack:"id" json:"clientId"`    // 客户端ID
-	Previous    string `msgpack:"pr" json:"previous"`    // Parent ParentToken
-	AccessToken string `msgpack:"at" json:"accessToken"` // Parent ParentToken
-	ExpiresIn   int64  `msgpack:"ei" json:"expiresIn"`   // 过期时间
-	Scope       string `msgpack:"s" json:"scope"`        // 范围
-	RedirectUri string `msgpack:"r" json:"redirectUri"`  // 跳转地址
-	Ctime       int64  `msgpack:"ct" json:"ctime"`       // 创建时间
+	ClientId      string `msgpack:"id" json:"clientId"`        // 客户端ID
+	PreviousToken string `msgpack:"pret" json:"previousToken"` // 上一个Token信息
+	CurrentToken  string `msgpack:"curt" json:"currentToken"`  // 当前Token信息，这个用于刷新token使用
+	ExpiresIn     int64  `msgpack:"ei" json:"expiresIn"`       // 过期时间
+	Scope         string `msgpack:"s" json:"scope"`            // 范围
+	RedirectUri   string `msgpack:"r" json:"redirectUri"`      // 跳转地址
+	Ctime         int64  `msgpack:"ct" json:"ctime"`           // 创建时间
 }
 
 func (u AccessData) Marshal() []byte {

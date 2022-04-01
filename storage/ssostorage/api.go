@@ -18,12 +18,12 @@ type API struct {
 	db                *egorm.Component
 	config            *config
 	logger            *elog.Component
-	uidMapParentToken *uidMapParentToken
+	uidMapParentToken *userToken
 	parentToken       *parentToken
 	subToken          *subToken
 }
 
-func newAPI(config *config, logger *elog.Component, db *egorm.Component, redis *eredis.Component, uidMapParentToken *uidMapParentToken, parentToken *parentToken, subToken *subToken) *API {
+func newAPI(config *config, logger *elog.Component, db *egorm.Component, redis *eredis.Component, uidMapParentToken *userToken, parentToken *parentToken, subToken *subToken) *API {
 	return &API{
 		config:            config,
 		redis:             redis,
@@ -41,8 +41,8 @@ func (s *API) CreateClient(ctx context.Context, app *dao.App) (err error) {
 	if err != nil {
 		return fmt.Errorf("sso storage CreateClient failed, err: %w", err)
 	}
-	client := &clientInfo{
-		Id:          app.ClientId,
+	client := &ClientInfo{
+		ClientId:    app.ClientId,
 		Secret:      app.Secret,
 		RedirectUri: app.RedirectUri,
 	}
@@ -58,8 +58,8 @@ func (s *API) UpdateClient(ctx context.Context, clientId string, updates map[str
 	if err != nil {
 		return fmt.Errorf("sso storage UpdateClient failed, err: %w", err)
 	}
-	client := &clientInfo{
-		Id:          updates["client_id"].(string),
+	client := &ClientInfo{
+		ClientId:    updates["client_id"].(string),
 		Secret:      updates["secret"].(string),
 		RedirectUri: updates["redirect_uri"].(string),
 	}
@@ -84,7 +84,7 @@ func (s *API) DeleteClient(ctx context.Context, clientId string) (err error) {
 }
 
 // GetClient hgetall sso:client
-func (s *API) GetClient(ctx context.Context, clientId string) (info *clientInfo, err error) {
+func (s *API) GetClient(ctx context.Context, clientId string) (info *ClientInfo, err error) {
 	infoBytes, err := s.redis.Client().HGet(ctx, s.config.storeClientInfoKey, clientId).Bytes()
 	if err != nil && !errors.Is(err, redis.Nil) {
 		err = fmt.Errorf("sso storage GetClient redis get failed, err: %w", err)
@@ -96,7 +96,7 @@ func (s *API) GetClient(ctx context.Context, clientId string) (info *clientInfo,
 		return
 	}
 
-	client := &clientInfo{}
+	client := &ClientInfo{}
 	err = client.Unmarshal(infoBytes)
 	if err != nil {
 		err = fmt.Errorf("sso storage GetClient unmarshal failed, err: %w", err)

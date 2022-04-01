@@ -11,24 +11,24 @@ import (
 )
 
 type subToken struct {
-	config             *config
-	hashKeyParentToken string
-	hashKeyClientId    string
-	hashKeyTokenInfo   string
-	hashKeyCtime       string
-	hashKeyAccessInfo  string
-	redis              *eredis.Component
+	config           *config
+	redis            *eredis.Component
+	fieldParentToken string
+	fieldClientId    string
+	fieldTokenInfo   string
+	fieldCtime       string
+	fieldAccessInfo  string
 }
 
 func newSubToken(config *config, redis *eredis.Component) *subToken {
 	return &subToken{
-		config:             config,
-		hashKeyCtime:       "_ct", // create time
-		hashKeyParentToken: "_pt",
-		hashKeyClientId:    "_id",
-		hashKeyTokenInfo:   "_t",
-		hashKeyAccessInfo:  "_a",
-		redis:              redis,
+		config:           config,
+		fieldCtime:       "_ct", // create time
+		fieldParentToken: "_pt",
+		fieldClientId:    "_id",
+		fieldTokenInfo:   "_t",
+		fieldAccessInfo:  "_a",
+		redis:            redis,
 	}
 }
 
@@ -38,11 +38,11 @@ func (s *subToken) getKey(subToken string) string {
 
 func (s *subToken) create(ctx context.Context, token model.SubToken, parentToken string, clientId string, accessData *AccessData) error {
 	err := s.redis.HMSet(ctx, s.getKey(token.Token.Token), map[string]interface{}{
-		s.hashKeyParentToken: parentToken,
-		s.hashKeyClientId:    clientId,
-		s.hashKeyCtime:       time.Now().Unix(),
-		s.hashKeyAccessInfo:  accessData.Marshal(),
-		s.hashKeyTokenInfo:   token.StoreData.Marshal(),
+		s.fieldParentToken: parentToken,
+		s.fieldClientId:    clientId,
+		s.fieldCtime:       time.Now().Unix(),
+		s.fieldAccessInfo:  accessData.Marshal(),
+		s.fieldTokenInfo:   token.StoreData.Marshal(),
 	}, time.Duration(token.Token.ExpiresIn)*time.Second)
 	if err != nil {
 		return fmt.Errorf("subToken.create token failed, err:%w", err)
@@ -51,7 +51,7 @@ func (s *subToken) create(ctx context.Context, token model.SubToken, parentToken
 }
 
 func (s *subToken) getAccess(ctx context.Context, token string) (storeData *AccessData, err error) {
-	infoBytes, err := s.redis.Client().HGet(ctx, s.getKey(token), s.hashKeyAccessInfo).Bytes()
+	infoBytes, err := s.redis.Client().HGet(ctx, s.getKey(token), s.fieldAccessInfo).Bytes()
 	info := &AccessData{}
 	err = info.Unmarshal(infoBytes)
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *subToken) remove(ctx context.Context, token string) (bool, error) {
 
 // 通过子系统token，获得父节点token
 func (s *subToken) getParentToken(ctx context.Context, subToken string) (parentToken string, err error) {
-	parentToken, err = s.redis.HGet(ctx, s.getKey(subToken), s.hashKeyParentToken)
+	parentToken, err = s.redis.HGet(ctx, s.getKey(subToken), s.fieldParentToken)
 	if err != nil {
 		err = fmt.Errorf("subToken.getParentToken failed, %w", err)
 		return
@@ -86,18 +86,18 @@ type SubTokenStore struct {
 	TTL         int64               `json:"ttl"`
 }
 
-func (p *SubTokenStore) processData(key string, value string) {
+func (p *subToken) processData(store *SubTokenStore, key string, value string) {
 	switch true {
-	case key == "_ct":
-		p.Ctime = cast.ToInt64(value)
-	case key == "_pt":
-		p.ParentToken = value
-	case key == "_id":
-		p.ClientId = value
-	case key == "_t":
-		p.TokenInfo.Unmarshal([]byte(value))
-	case key == "_a":
-		p.AccessInfo.Unmarshal([]byte(value))
+	case key == p.fieldCtime:
+		store.Ctime = cast.ToInt64(value)
+	case key == p.fieldParentToken:
+		store.ParentToken = value
+	case key == p.fieldClientId:
+		store.ClientId = value
+	case key == p.fieldTokenInfo:
+		store.TokenInfo.Unmarshal([]byte(value))
+	case key == p.fieldAccessInfo:
+		store.AccessInfo.Unmarshal([]byte(value))
 	}
 }
 
@@ -116,7 +116,7 @@ func (p *subToken) getAll(ctx context.Context, token string) (output *SubTokenSt
 		TTL:         0,
 	}
 	for key, value := range allInfo {
-		output.processData(key, value)
+		p.processData(output, key, value)
 	}
 	ttl, err := p.redis.Client().TTL(ctx, p.getKey(token)).Result()
 	if err != nil {
