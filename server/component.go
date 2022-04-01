@@ -242,8 +242,9 @@ func (r *AuthorizeRequest) generateSsoData() {
 	}
 	r.ssoData = model.ParentToken{
 		Token: ssoParentToken,
+		Uid:   r.ssoUid,
 		StoreData: model.ParentTokenData{
-			Uid:      r.ssoUid,
+			Ctime:    time.Now().Unix(),
 			Platform: r.ssoPlatform,
 			ClientIP: r.ssoClientIP,
 			UA:       r.ssoUA,

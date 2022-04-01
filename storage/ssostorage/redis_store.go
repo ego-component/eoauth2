@@ -4,20 +4,20 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
-// uidTokenExpire 用户Uid里parent token存储的一些信息
-type uidTokenExpire struct {
-	Token      string `msgpack:"t"`
-	ExpireTime int64  `msgpack:"et"`
+// UserTokenExpire 用户Uid里parent token存储的一些信息
+type UserTokenExpire struct {
+	Token      string `msgpack:"t" json:"token"`
+	ExpireTime int64  `msgpack:"et" json:"expireTime"`
 }
 
-type UidTokenExpires []uidTokenExpire
+type UserTokenExpires []UserTokenExpire
 
-func (u UidTokenExpires) Marshal() []byte {
+func (u UserTokenExpires) Marshal() []byte {
 	info, _ := msgpack.Marshal(u)
 	return info
 }
 
-func (u *UidTokenExpires) Unmarshal(content []byte) error {
+func (u *UserTokenExpires) Unmarshal(content []byte) error {
 	return msgpack.Unmarshal(content, u)
 }
 
@@ -57,22 +57,22 @@ func (u *authorizeData) Unmarshal(content []byte) error {
 	return msgpack.Unmarshal(content, u)
 }
 
-type accessData struct {
-	ClientId    string `msgpack:"id"` // 客户端ID
-	Previous    string `msgpack:"pr"` // Parent ParentToken
-	AccessToken string `msgpack:"at"` // Parent ParentToken
-	ExpiresIn   int64  `msgpack:"ei"` // 过期时间
-	Scope       string `msgpack:"s"`  // 范围
-	RedirectUri string `msgpack:"r"`  // 跳转地址
-	Ctime       int64  `msgpack:"ct"` // 创建时间
+type AccessData struct {
+	ClientId    string `msgpack:"id" json:"clientId"`    // 客户端ID
+	Previous    string `msgpack:"pr" json:"previous"`    // Parent ParentToken
+	AccessToken string `msgpack:"at" json:"accessToken"` // Parent ParentToken
+	ExpiresIn   int64  `msgpack:"ei" json:"expiresIn"`   // 过期时间
+	Scope       string `msgpack:"s" json:"scope"`        // 范围
+	RedirectUri string `msgpack:"r" json:"redirectUri"`  // 跳转地址
+	Ctime       int64  `msgpack:"ct" json:"ctime"`       // 创建时间
 }
 
-func (u accessData) Marshal() []byte {
+func (u AccessData) Marshal() []byte {
 	info, _ := msgpack.Marshal(u)
 	return info
 }
 
-func (u *accessData) Unmarshal(content []byte) error {
+func (u *AccessData) Unmarshal(content []byte) error {
 	return msgpack.Unmarshal(content, u)
 }
 

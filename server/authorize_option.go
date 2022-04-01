@@ -42,8 +42,8 @@ func WithAuthorizeSsoClientIP(clientIP string) AuthorizeRequestOption {
 	}
 }
 
-func WithAuthorizeSsoUA(parentToken string) AuthorizeRequestOption {
+func WithAuthorizeSsoUA(ua string) AuthorizeRequestOption {
 	return func(c *AuthorizeRequest) {
-		c.ssoPlatform = parentToken
+		c.ssoUA = ua
 	}
 }

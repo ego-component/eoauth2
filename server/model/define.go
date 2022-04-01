@@ -6,6 +6,7 @@ import (
 
 type ParentToken struct {
 	Token     Token
+	Uid       int64
 	StoreData ParentTokenData // 用于存储token一些信息，用来查询用户情况
 }
 
@@ -15,10 +16,10 @@ type SubToken struct {
 }
 
 type ParentTokenData struct {
-	Uid      int64  `msgpack:"uid"`
-	UA       string `msgpack:"ua"`
-	ClientIP string `msgpack:"ip"`
-	Platform string `msgpack:"p"`
+	Ctime    int64  `msgpack:"c" json:"ctime"`
+	UA       string `msgpack:"ua" json:"ua"`
+	ClientIP string `msgpack:"ip" json:"clientIp"`
+	Platform string `msgpack:"p" json:"platform"`
 }
 
 func (u ParentTokenData) Marshal() []byte {
@@ -31,8 +32,8 @@ func (u *ParentTokenData) Unmarshal(content []byte) error {
 }
 
 type SubTokenData struct {
-	UA       string `msgpack:"ua"`
-	ClientIP string `msgpack:"ip"`
+	UA       string `msgpack:"ua" json:"ua"`
+	ClientIP string `msgpack:"ip" json:"clientIP"`
 }
 
 func (u SubTokenData) Marshal() []byte {

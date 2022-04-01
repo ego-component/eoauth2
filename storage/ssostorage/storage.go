@@ -198,7 +198,7 @@ func (s *Storage) SaveAccess(ctx context.Context, data *server.AccessData) (err 
 		return errors.New("data.Client must not be nil")
 	}
 
-	storeData := &accessData{
+	storeData := &AccessData{
 		ClientId:    data.Client.GetId(),
 		Previous:    prevToken,
 		AccessToken: data.AccessToken,

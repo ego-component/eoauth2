@@ -10,8 +10,8 @@ import (
 
 type Token struct {
 	Token     string `json:"token" msgpack:"t"`
-	AuthAt    int64  `json:"auth_at" msgpack:"at"`
-	ExpiresIn int64  `json:"expires_in" msgpack:"ex"` // Token 多长时间后过期(s)
+	AuthAt    int64  `json:"authAt" msgpack:"at"`
+	ExpiresIn int64  `json:"expiresIn" msgpack:"ex"` // Token 多长时间后过期(s)
 }
 
 func NewToken(expiresIn int64) Token {

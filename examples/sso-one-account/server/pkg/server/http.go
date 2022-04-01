@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gotomicro/ego/core/econf"
 	"github.com/gotomicro/ego/server/egin"
+	"github.com/spf13/cast"
 )
 
 type ReqOauthLogin struct {
@@ -54,6 +55,30 @@ func ServeHttp() *egin.Component {
 
 		ssoServer(c, ar, 1)
 		return
+	})
+	router.GET("/parentToken", func(c *gin.Context) {
+		info, err := invoker.TokenStorage.GetAPI().GetAllByParentToken(c.Request.Context(), c.Query("token"))
+		if err != nil {
+			c.JSON(200, err.Error())
+			return
+		}
+		c.JSON(200, info)
+	})
+	router.GET("/user", func(c *gin.Context) {
+		info, err := invoker.TokenStorage.GetAPI().GetAllByUser(c.Request.Context(), cast.ToInt64(c.Query("uid")))
+		if err != nil {
+			c.JSON(200, err.Error())
+			return
+		}
+		c.JSON(200, info)
+	})
+	router.GET("/subToken", func(c *gin.Context) {
+		info, err := invoker.TokenStorage.GetAPI().GetAllBySubToken(c.Request.Context(), c.Query("token"))
+		if err != nil {
+			c.JSON(200, err.Error())
+			return
+		}
+		c.JSON(200, info)
 	})
 	return router
 }

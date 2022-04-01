@@ -26,7 +26,7 @@ func initTokenServer(config *config, uidMapParentToken *uidMapParentToken, paren
 // createParentToken sso的父节点token
 func (t *tokenServer) createParentToken(ctx context.Context, ssoData model.ParentToken) (err error) {
 	// 1 设置uid 到 parent token关系
-	err = t.uidMapParentToken.setToken(ctx, ssoData.StoreData.Uid, ssoData.StoreData.Platform, ssoData.Token)
+	err = t.uidMapParentToken.setToken(ctx, ssoData.Uid, ssoData.StoreData.Platform, ssoData.Token)
 	if err != nil {
 		return fmt.Errorf("token.createParentToken: create token map failed, err:%w", err)
 	}
@@ -35,17 +35,18 @@ func (t *tokenServer) createParentToken(ctx context.Context, ssoData model.Paren
 	return t.parentToken.create(ctx, ssoData)
 }
 
-func (t *tokenServer) renewParentToken(ctx context.Context, pToken model.Token) (err error) {
-	// 1 设置uid 到 parent token关系
-	err = t.parentToken.renew(ctx, pToken)
-	if err != nil {
-		return fmt.Errorf("token.createParentToken: create token map failed, err:%w", err)
-	}
-	return nil
-}
+//
+//func (t *tokenServer) renewParentToken(ctx context.Context, pToken model.Token) (err error) {
+//	// 1 设置uid 到 parent token关系
+//	err = t.parentToken.renew(ctx, pToken)
+//	if err != nil {
+//		return fmt.Errorf("token.createParentToken: create token map failed, err:%w", err)
+//	}
+//	return nil
+//}
 
 // createToken 创建TOKEN信息，并且存入access信息
-func (t *tokenServer) createToken(ctx context.Context, clientId string, token model.SubToken, pToken string, storeData *accessData) (err error) {
+func (t *tokenServer) createToken(ctx context.Context, clientId string, token model.SubToken, pToken string, storeData *AccessData) (err error) {
 	err = t.parentToken.setToken(ctx, pToken, clientId, token.Token)
 	if err != nil {
 		return fmt.Errorf("tokenServer.createToken failed, err:%w", err)
@@ -55,7 +56,7 @@ func (t *tokenServer) createToken(ctx context.Context, clientId string, token mo
 	return
 }
 
-func (t *tokenServer) getAccess(ctx context.Context, token string) (storeData *accessData, err error) {
+func (t *tokenServer) getAccess(ctx context.Context, token string) (storeData *AccessData, err error) {
 	return t.subToken.getAccess(ctx, token)
 }
 
