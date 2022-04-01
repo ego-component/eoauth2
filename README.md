@@ -13,10 +13,10 @@ cd examples/simple && EGO_DEBUG=true && go run main.go
 // 访问 http://127.0.0.1:9090/app
 ```
 ### 单点登录
-* [单点登录文档](./examples/sso/readme.md)
-* [单点登录Examples](./examples/sso/makefile)
+* [单点登录文档](./examples/sso-one-account/readme.md)
+* [单点登录Examples](./examples/sso-one-account/makefile)
 
-## Example Server
+## Example Oauth2 Server
 ```go
 type ReqOauthLogin struct {
     RedirectUri  string `json:"redirect_uri" form:"redirect_uri"` // redirect by backend
