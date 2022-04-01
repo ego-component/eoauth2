@@ -60,7 +60,7 @@ func newParentToken(config *config, redis *eredis.Component) *parentToken {
 		hashKeyCtime:          "_ct",    // create time
 		hashKeyUids:           "_u",     // uid
 		hashKeyExpireTimeList: "_etl",   // expire time List
-		hashKeyClient:         "_c:%s",  // ClientInfo
+		hashKeyClient:         "_c:",    // ClientInfo
 		hashKeyUserInfo:       "_ui:%d", // UserInfo
 
 	}
@@ -71,7 +71,7 @@ func (p *parentToken) getKey(pToken string) string {
 }
 
 func (p *parentToken) getClientField(subToken string) string {
-	return fmt.Sprintf(p.hashKeyClient, subToken)
+	return p.hashKeyClient + subToken
 }
 
 func (p *parentToken) create(ctx context.Context, ssoData model.ParentToken) error {
@@ -122,8 +122,8 @@ func (p *parentToken) create(ctx context.Context, ssoData model.ParentToken) err
 	return nil
 }
 
-//func (p *parentToken) renew(ctx context.Context, pToken model.Token) error {
-//	err := p.redis.Client().Expire(ctx, p.getKey(pToken.Token), time.Duration(pToken.ExpiresIn)*time.Second).Err()
+//func (p *parentToken) renew(ctx context.Context, pToken model.Field) error {
+//	err := p.redis.Client().Expire(ctx, p.getKey(pToken.Field), time.Duration(pToken.ExpiresIn)*time.Second).Err()
 //	if err != nil {
 //		return fmt.Errorf("parentToken.renew failed, err:%w", err)
 //	}
@@ -131,8 +131,30 @@ func (p *parentToken) create(ctx context.Context, ssoData model.ParentToken) err
 //	return nil
 //}
 
-func (p *parentToken) delete(ctx context.Context, pToken string) error {
-	_, err := p.redis.Del(ctx, p.getKey(pToken))
+func (p *parentToken) removeSubToken(ctx context.Context, pToken string, subToken string) error {
+	_ = p.redis.HDel(ctx, p.getKey(pToken), p.getClientField(subToken))
+	expireTimeList, err := p.getExpireTimeList(ctx, pToken)
+	if err != nil {
+		return err
+	}
+
+	newExpireTimeList := make(UserTokenExpires, 0)
+	// 删除不要的数据
+	for _, value := range expireTimeList {
+		if value.Field == p.getClientField(subToken) {
+			continue
+		}
+		newExpireTimeList = append(newExpireTimeList, value)
+	}
+	err = p.redis.HSet(ctx, p.getKey(pToken), p.hashKeyExpireTimeList, newExpireTimeList.Marshal())
+	if err != nil {
+		return fmt.Errorf("parentToken removeSubToken failed, error: %w", err)
+	}
+	return nil
+}
+
+func (p *parentToken) remove(ctx context.Context, pToken string) error {
+	_, err := p.redis.Expire(ctx, p.getKey(pToken), 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("token.removeParentToken: remove token failed, err:%w", err)
 	}
@@ -154,7 +176,7 @@ func (p *parentToken) setToken(ctx context.Context, pToken string, clientId stri
 	newExpireTimeList := make(UserTokenExpires, 0)
 	// 新数据添加到队列前面，这样方便后续清除数据，或者对数据做一些限制
 	newExpireTimeList = append(newExpireTimeList, UserTokenExpire{
-		Token:      p.getClientField(token.Token),
+		Field:      p.getClientField(token.Token),
 		ExpireTime: nowTime + token.ExpiresIn,
 	})
 
@@ -163,7 +185,7 @@ func (p *parentToken) setToken(ctx context.Context, pToken string, clientId stri
 	for _, value := range expireTimeList {
 		// 过期时间小于当前时间，那么需要删除
 		if value.ExpireTime <= nowTime {
-			hdelFields = append(hdelFields, value.Token)
+			hdelFields = append(hdelFields, value.Field)
 			continue
 		}
 		newExpireTimeList = append(newExpireTimeList, value)
@@ -230,8 +252,19 @@ func (p *parentToken) getExpireTimeList(ctx context.Context, pToken string) (uid
 	return
 }
 
+func (p *parentToken) getSubTokenByExpireTimeListField(field string) (subToken string, err error) {
+	if !strings.HasPrefix(field, p.hashKeyClient) {
+		return "", fmt.Errorf("parentToken getSubTokenByExpireTimeListField failed,err: %w", fmt.Errorf("not field"))
+	}
+	arr := strings.Split(field, ":")
+	if len(arr) != 2 {
+		return "", fmt.Errorf("parentToken getSubTokenByExpireTimeListField failed,err: %w", fmt.Errorf("length error"))
+	}
+	return arr[1], nil
+}
+
 // todo client id记录token会有问题，多账号是无法使用，还需要优化
-//func (p *parentToken) getToken(ctx context.Context, pToken string, clientId string) (tokenInfo model.Token, err error) {
+//func (p *parentToken) getToken(ctx context.Context, pToken string, clientId string) (tokenInfo model.Field, err error) {
 //	tokenValue, err := p.redis.HGet(ctx, p.getKey(pToken), p.getClientField(clientId))
 //	if err != nil {
 //		err = fmt.Errorf("tokgen get redis hmget string error, %w", err)

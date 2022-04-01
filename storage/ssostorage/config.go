@@ -41,14 +41,13 @@ type config struct {
 	subTokenMapParentTokenKey string // token与父级token的映射关系
 	storeClientInfoKey        string // 存储sso client的信息
 	storeAuthorizeKey         string // 存储sso authorize的信息
-	//clientType                []string // 支持的客户端类型，web、andorid、ios，用于设置一个客户端，可以登录几个parent token。
 }
 
 func defaultConfig() *config {
 	return &config{
 		enableMultipleAccounts:    false,
 		uidMapParentTokenKey:      "sso:uid:%d",  // uid map parent token type
-		parentTokenMapSubTokenKey: "sso:ptk:%s",  //  parent token map
+		parentTokenMapSubTokenKey: "sso:ptk:%s",  // parent token map
 		subTokenMapParentTokenKey: "sso:stk:%s",  // sub token map parent token
 		storeClientInfoKey:        "sso:client",  // sso的client信息，使用hash map
 		storeAuthorizeKey:         "sso:auth:%s", // 存储auth信息

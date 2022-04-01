@@ -67,7 +67,7 @@ func (u *uidMapParentToken) setToken(ctx context.Context, uid int64, platform st
 	newExpireTimeList := make(UserTokenExpires, 0)
 	// 新数据添加到队列前面，这样方便后续清除数据，或者对数据做一些限制
 	newExpireTimeList = append(newExpireTimeList, UserTokenExpire{
-		Token:      fieldKey,
+		Field:      fieldKey,
 		ExpireTime: nowTime + pToken.ExpiresIn,
 	})
 
@@ -76,7 +76,7 @@ func (u *uidMapParentToken) setToken(ctx context.Context, uid int64, platform st
 	for _, value := range expireTimeList {
 		// 过期时间小于当前时间，那么需要删除
 		if value.ExpireTime <= nowTime {
-			hdelFields = append(hdelFields, value.Token)
+			hdelFields = append(hdelFields, value.Field)
 			continue
 		}
 		newExpireTimeList = append(newExpireTimeList, value)
@@ -120,6 +120,28 @@ func (u *uidMapParentToken) setToken(ctx context.Context, uid int64, platform st
 		}
 	}
 
+	return nil
+}
+
+func (u *uidMapParentToken) removeParentToken(ctx context.Context, uid int64, parentToken string) error {
+	_ = u.redis.HDel(ctx, u.getKey(uid), u.getFieldKey(parentToken))
+	expireTimeList, err := u.getExpireTimeList(ctx, uid)
+	if err != nil {
+		return err
+	}
+
+	newExpireTimeList := make(UserTokenExpires, 0)
+	// 删除不要的数据
+	for _, value := range expireTimeList {
+		if value.Field == u.getFieldKey(parentToken) {
+			continue
+		}
+		newExpireTimeList = append(newExpireTimeList, value)
+	}
+	err = u.redis.HSet(ctx, u.getKey(uid), u.hashExpireTimeList, newExpireTimeList.Marshal())
+	if err != nil {
+		return fmt.Errorf("parentToken removeSubToken failed, error: %w", err)
+	}
 	return nil
 }
 

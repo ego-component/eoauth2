@@ -36,7 +36,7 @@ func (t *tokenServer) createParentToken(ctx context.Context, ssoData model.Paren
 }
 
 //
-//func (t *tokenServer) renewParentToken(ctx context.Context, pToken model.Token) (err error) {
+//func (t *tokenServer) renewParentToken(ctx context.Context, pToken model.Field) (err error) {
 //	// 1 设置uid 到 parent token关系
 //	err = t.parentToken.renew(ctx, pToken)
 //	if err != nil {
@@ -60,12 +60,39 @@ func (t *tokenServer) getAccess(ctx context.Context, token string) (storeData *A
 	return t.subToken.getAccess(ctx, token)
 }
 
-func (t *tokenServer) removeToken(ctx context.Context, token string) (bool, error) {
-	return t.subToken.removeToken(ctx, token)
+// removeToken 这个地方还要移除parent token里面的sub token。要不然数据会爆炸
+func (t *tokenServer) removeToken(ctx context.Context, subToken string) error {
+	pToken, err := t.getParentTokenByToken(ctx, subToken)
+	if err != nil {
+		return err
+	}
+	// 删除掉parent token里的信息
+	_ = t.parentToken.removeSubToken(ctx, pToken, subToken)
+	// 最后移除，可能会有用到信息
+	_, _ = t.subToken.remove(ctx, subToken)
+	return nil
 }
 
+// removeParentToken 这个地方还要移除user里面的parent token。要不然数据会爆炸
+// 还需要删除长token里的所有短token
 func (t *tokenServer) removeParentToken(ctx context.Context, pToken string) (err error) {
-	return t.parentToken.delete(ctx, pToken)
+	// 删除所有里面的sub token
+	expireList, _ := t.parentToken.getExpireTimeList(ctx, pToken)
+	for _, value := range expireList {
+		subTokenStr, _ := t.parentToken.getSubTokenByExpireTimeListField(value.Field)
+		_, _ = t.subToken.remove(ctx, subTokenStr)
+	}
+
+	uids, err := t.getUidsByParentToken(ctx, pToken)
+	if err != nil {
+		return err
+	}
+	for _, uid := range uids {
+		_ = t.uidMapParentToken.removeParentToken(ctx, uid, pToken)
+	}
+
+	// 最后移除，可能会有用到信息
+	return t.parentToken.remove(ctx, pToken)
 }
 
 func (t *tokenServer) getUidsByParentToken(ctx context.Context, pToken string) (uids []int64, err error) {

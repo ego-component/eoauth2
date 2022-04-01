@@ -139,7 +139,7 @@ func ServeHttp() *egin.Component {
 			return
 		}
 		//userResp, err := invoker.SsoGrpc.GetUserByToken(ctx, &ssov1.GetUserByTokenRequest{
-		//	Token: accessInfo.Token,
+		//	Field: accessInfo.Field,
 		//})
 		//
 		//if err != nil {

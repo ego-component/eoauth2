@@ -61,8 +61,8 @@ func (s *subToken) getAccess(ctx context.Context, token string) (storeData *Acce
 	return info, nil
 }
 
-// removeToken 触发这个场景是refresh token操作，给30s时间，避免换token的时间差，prev token过早失效导致的业务问题
-func (s *subToken) removeToken(ctx context.Context, token string) (bool, error) {
+// remove 触发这个场景是refresh token操作，给30s时间，避免换token的时间差，prev token过早失效导致的业务问题
+func (s *subToken) remove(ctx context.Context, token string) (bool, error) {
 	return s.redis.Expire(ctx, s.getKey(token), 30*time.Second)
 }
 

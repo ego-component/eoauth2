@@ -105,21 +105,6 @@ func (s *API) GetClient(ctx context.Context, clientId string) (info *clientInfo,
 	return
 }
 
-/** Parent Token start **/
-
-// GetUidsByParentToken 获取uids信息 hgetall sso:ptk:%s
-//func (s *API) GetUidsByParentToken(ctx context.Context, pToken string) (uids []int64, err error) {
-//	return s.parentToken.getUids(ctx, pToken)
-//}
-//
-//func (s *API) GetExpireTimeListByParentToken(ctx context.Context, pToken string) (tokenList UserTokenExpires, err error) {
-//	return s.parentToken.getExpireTimeList(ctx, pToken)
-//}
-
-//func (s *API) GetTokenByParentToken(ctx context.Context, pToken string, clientId string) (tokenInfo model.Token, err error) {
-//	return s.parentToken.getToken(ctx, pToken, clientId)
-//}
-
 func (s *API) GetAllByParentToken(ctx context.Context, pToken string) (tokenInfo *ParentTokenStore, err error) {
 	return s.parentToken.getAll(ctx, pToken)
 }

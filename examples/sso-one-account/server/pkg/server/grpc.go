@@ -61,7 +61,11 @@ func (SsoGrpc) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenRequest)
 		},
 	})
 
-	err = ar.Build(server.WithAccessRequestAuthorized(true))
+	err = ar.Build(
+		server.WithAccessAuthUA(req.GetClientUA()),
+		server.WithAccessAuthClientIP(req.GetClientIP()),
+		server.WithAccessRequestAuthorized(true),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("RefreshToken error, %w", err)
 	}

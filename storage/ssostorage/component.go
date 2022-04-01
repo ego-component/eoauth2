@@ -56,7 +56,6 @@ func (s *Component) RemoveAllAccess(ctx context.Context, token string) (err erro
 	if err != nil {
 		return err
 	}
-
 	// 删除redis token
 	return s.tokenServer.removeParentToken(ctx, pToken)
 }
@@ -96,6 +95,6 @@ func (s *Component) RemoveParentToken(ctx context.Context, pToken string) (err e
 }
 
 // todo 后期再说 RenewParentToken 续期父级token
-//func (s *Component) RenewParentToken(ctx context.Context, pToken model.Token) (err error) {
+//func (s *Component) RenewParentToken(ctx context.Context, pToken model.Field) (err error) {
 //	return s.tokenServer.renewParentToken(ctx, pToken)
 //}

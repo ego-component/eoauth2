@@ -155,15 +155,14 @@ ego.New().Serve(func() *egin.Component {
 }()).Run()
 ```
 
-## 原理
-### 单点登录系统
+## 单点登录
+### 流程
 * 客户端服务端写入state信息，并生成url
 * 通过浏览器请求sso，sso返回给浏览器code信息
 * code信息回传给客户端的服务端，请求sso服务，获得token
 * 将token存入到浏览器的http only的cookie里
 * 所有接口都可以通过该token，grpc获取用户信息
 
-## 流程
 ### Authorize
 * 写入authorize表，生成code码
 * 写入authorize过期时间
@@ -176,7 +175,109 @@ ego.New().Serve(func() *egin.Component {
     * save access token
     * remove previous access token
 
-## SSO配置说明
+### SDK API说明
+```go
+// 获取sso的用户信息
+router.GET("/user", func(c *gin.Context) {
+    info, err := invoker.TokenStorage.GetAPI().GetAllByUser(c.Request.Context(), cast.ToInt64(c.Query("uid")))
+    if err != nil {
+    c.JSON(200, err.Error())
+    return
+    }
+    c.JSON(200, info)
+})
+
+// 获取sso的长token信息
+router.GET("/parentToken", func(c *gin.Context) {
+    info, err := invoker.TokenStorage.GetAPI().GetAllByParentToken(c.Request.Context(), c.Query("token"))
+    if err != nil {
+        c.JSON(200, err.Error())
+        return
+    }
+    c.JSON(200, info)
+})
+
+// 获取sso的短token信息
+router.GET("/subToken", func(c *gin.Context) {
+    info, err := invoker.TokenStorage.GetAPI().GetAllBySubToken(c.Request.Context(), c.Query("token"))
+    if err != nil {
+        c.JSON(200, err.Error())
+        return
+    }
+    c.JSON(200, info)
+})
+```
+#### 获取sso的用户信息
+```json
+{
+    "ctime": 0, 
+    "clients": {
+        "j14vJUQAQlCKA8D0TMIG4w": {
+            "token": "j14vJUQAQlCKA8D0TMIG4w",
+            "authAt": 1648802442,
+            "expiresIn": 2592000
+        }
+    },
+    "expireTimeList": [{
+        "field": "_c:j14vJUQAQlCKA8D0TMIG4w",
+        "expireTime": 1651394442
+    }],
+    "ttl": 2591922
+}
+```
+#### 获取sso的长token信息
+```json
+{
+  "ctime": 1648802442,
+  "uids": [
+    1
+  ],
+  "clients": {
+      "ebZJXwzXSQmJmAKOX8-gKQ": {
+        "token": "ebZJXwzXSQmJmAKOX8-gKQ",
+        "authAt": 1648802442,
+        "expiresIn": 86400
+      }
+  },
+  "users": {
+    "1": {
+      "ctime": 1648802442,
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36",
+      "clientIp": "::1",
+      "platform": "web"
+    }
+  },
+  "expireTimeList": [{
+    "field": "_c:ebZJXwzXSQmJmAKOX8-gKQ",
+    "expireTime": 1648888842
+  }],
+  "ttl": 2591978
+}
+```
+#### 获取sso的短token信息
+```json
+{
+  "ctime": 1648802442,
+  "parentToken": "j14vJUQAQlCKA8D0TMIG4w",
+  "clientId": "1234",
+  "tokenInfo": {
+    "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36",
+    "clientIP": "::1"
+  },
+  "accessInfo": {
+    "clientId": "1234",
+    "previous": "",
+    "accessToken": "ebZJXwzXSQmJmAKOX8-gKQ",
+    "expiresIn": 86400,
+    "scope": "",
+    "redirectUri": "http://localhost:29001/oauth/code",
+    "ctime": 1648802442
+  },
+  "ttl": 86361
+}
+```
+
+#### SSO Redis key配置说明
 ```makefile
 获取parent token信息
 hgetall sso:ptk:_xryboGNQU-490RpAOBMYQ
