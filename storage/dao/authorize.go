@@ -15,7 +15,7 @@ type Authorize struct {
 	ExpiresIn   int64  `gorm:"not null;default:0;comment:过期时间" json:"expiresIn"`    // 过期时间
 	Scope       string `gorm:"not null;default:'';comment:范围" json:"scope"`         // 范围
 	RedirectUri string `gorm:"not null;default:'';comment:跳转地址" json:"redirectUri"` // 跳转地址
-	State       string `gorm:"not null;default:'';comment:状态" json:"state"`         // 状态
+	State       string `gorm:"not null;default:'';comment:状态" json:"state"`         // state信息，来自于url上的state信息
 	Extra       string `gorm:"not null;type:longtext;comment:额外信息" json:"extra"`    // 额外信息
 	Ctime       int64  `gorm:"not null;default:0;comment:创建时间" json:"ctime"`        // 创建时间
 }

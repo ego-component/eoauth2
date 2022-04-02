@@ -37,7 +37,7 @@ type GitlabUser struct {
 	Username string `json:"Username"`
 	Email    string `json:"Email"`
 	Name     string `json:"Name"`
-	State    string `json:"State"`
+	State    string `json:"Status"`
 }
 
 func (u *User) ToGitlabUser() GitlabUser {

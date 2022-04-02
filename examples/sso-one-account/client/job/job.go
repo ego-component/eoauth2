@@ -24,7 +24,7 @@ func InitAdminData(ctx ejob.Context) (err error) {
 		Name:        "sso-client",
 		Secret:      "5678",
 		RedirectUri: econf.GetString("client.codeUrl"),
-		State:       1,
+		Status:      1,
 	})
 	if err != nil {
 		return
