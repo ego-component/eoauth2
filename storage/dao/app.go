@@ -56,7 +56,7 @@ func UpdateApp(db *gorm.DB, clientId string, updates map[string]interface{}) (er
 }
 
 func DeleteApp(db *gorm.DB, clientId string) (err error) {
-	err = db.Model(App{}).Where("client_id = ?", clientId).Updates(map[string]interface{}{"dtime": 0}).Error
+	err = db.Model(App{}).Where("client_id = ?", clientId).Updates(map[string]interface{}{"dtime": time.Now().Unix()}).Error
 	if err != nil {
 		return fmt.Errorf("DeleteApp failed, err:%w", err)
 	}
