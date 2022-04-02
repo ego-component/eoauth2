@@ -58,10 +58,15 @@ func (s *API) UpdateClient(ctx context.Context, clientId string, updates map[str
 	if err != nil {
 		return fmt.Errorf("sso storage UpdateClient failed, err: %w", err)
 	}
+	// todo 判断
+	info, err := dao.GetAppInfoByClientId(s.db.WithContext(ctx), clientId)
+	if err != nil {
+		return fmt.Errorf("sso storage UpdateClient get info failed, err: %w", err)
+	}
 	client := &ClientInfo{
-		ClientId:    updates["client_id"].(string),
-		Secret:      updates["secret"].(string),
-		RedirectUri: updates["redirect_uri"].(string),
+		ClientId:    info.ClientId,
+		Secret:      info.Secret,
+		RedirectUri: info.RedirectUri,
 	}
 	err = s.redis.HSet(ctx, s.config.storeClientInfoKey, clientId, client.Marshal())
 	if err != nil {
