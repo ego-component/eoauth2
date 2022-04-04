@@ -60,7 +60,7 @@ func (t *tokenServer) getAccess(ctx context.Context, token string) (storeData *A
 	return t.subToken.getAccess(ctx, token)
 }
 
-// removeToken 这个地方还要移除parent token里面的sub token。要不然数据会爆炸
+// removeToken 这个地方还要移除parent token里面的sub token。要不然数据会有很多脏数据
 func (t *tokenServer) removeToken(ctx context.Context, subToken string) error {
 	pToken, err := t.getParentTokenByToken(ctx, subToken)
 	if err != nil {
@@ -73,7 +73,7 @@ func (t *tokenServer) removeToken(ctx context.Context, subToken string) error {
 	return nil
 }
 
-// removeParentToken 这个地方还要移除user里面的parent token。要不然数据会爆炸
+// removeParentToken 这个地方还要移除user里面的parent token。要不然数据会有很多脏数据
 // 还需要删除长token里的所有短token
 func (t *tokenServer) removeParentToken(ctx context.Context, pToken string) (err error) {
 	// 删除所有里面的sub token
@@ -91,7 +91,6 @@ func (t *tokenServer) removeParentToken(ctx context.Context, pToken string) (err
 		_ = t.uidMapParentToken.removeParentToken(ctx, uid, pToken)
 	}
 
-	// 最后移除，可能会有用到信息
 	return t.parentToken.remove(ctx, pToken)
 }
 

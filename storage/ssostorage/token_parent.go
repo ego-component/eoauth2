@@ -149,8 +149,9 @@ func (p *parentToken) removeSubToken(ctx context.Context, pToken string, subToke
 	return nil
 }
 
+// remove，退出的时候，必须del，避免有安全漏洞
 func (p *parentToken) remove(ctx context.Context, pToken string) error {
-	_, err := p.redis.Expire(ctx, p.getKey(pToken), 30*time.Second)
+	_, err := p.redis.Del(ctx, p.getKey(pToken))
 	if err != nil {
 		return fmt.Errorf("token.removeParentToken: remove token failed, err:%w", err)
 	}
