@@ -13,6 +13,7 @@ type AuthorizeRequestType string
 const (
 	CODE  AuthorizeRequestType = "code"
 	TOKEN AuthorizeRequestType = "token"
+	LOGIN AuthorizeRequestType = "login" // 直接登录
 
 	PKCE_PLAIN = "plain"
 	PKCE_S256  = "S256"

@@ -38,7 +38,7 @@ func DefaultConfig() *Config {
 		TokenExpiration:             3600 * 24,      // 默认一天
 		ParentTokenExpiration:       3600 * 24 * 30, // 默认30天
 		TokenType:                   "Bearer",
-		AllowedAuthorizeTypes:       AllowedAuthorizeTypes{CODE},
+		AllowedAuthorizeTypes:       AllowedAuthorizeTypes{CODE, LOGIN},
 		AllowedAccessTypes:          AllowedAccessTypes{AUTHORIZATION_CODE, REFRESH_TOKEN},
 		ErrorStatusCode:             200,
 		AllowClientSecretInParams:   true,
