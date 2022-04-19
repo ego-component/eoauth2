@@ -3,7 +3,7 @@ package dao
 import (
 	"fmt"
 
-	"github.com/gotomicro/ego-component/egorm"
+	"github.com/ego-component/egorm"
 	"gorm.io/gorm"
 )
 

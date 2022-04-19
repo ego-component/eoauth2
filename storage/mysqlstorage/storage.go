@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ego-component/egorm"
 	"github.com/ego-component/eoauth2/server"
 	"github.com/ego-component/eoauth2/storage/dao"
-	"github.com/gotomicro/ego-component/egorm"
 	"github.com/spf13/cast"
 	"gorm.io/gorm"
 )

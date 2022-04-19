@@ -3,9 +3,9 @@ package ssostorage
 import (
 	"context"
 
+	"github.com/ego-component/egorm"
 	"github.com/ego-component/eoauth2/server"
-	"github.com/gotomicro/ego-component/egorm"
-	"github.com/gotomicro/ego-component/eredis"
+	"github.com/ego-component/eredis"
 	"github.com/gotomicro/ego/core/elog"
 )
 

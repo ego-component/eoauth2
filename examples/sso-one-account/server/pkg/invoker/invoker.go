@@ -1,10 +1,10 @@
 package invoker
 
 import (
+	"github.com/ego-component/egorm"
 	ssoserver "github.com/ego-component/eoauth2/server"
 	"github.com/ego-component/eoauth2/storage/ssostorage"
-	"github.com/gotomicro/ego-component/egorm"
-	"github.com/gotomicro/ego-component/eredis"
+	"github.com/ego-component/eredis"
 )
 
 var (

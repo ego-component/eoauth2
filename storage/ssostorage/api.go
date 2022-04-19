@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ego-component/egorm"
 	"github.com/ego-component/eoauth2/server"
 	"github.com/ego-component/eoauth2/storage/dao"
+	"github.com/ego-component/eredis"
 	"github.com/go-redis/redis/v8"
-	"github.com/gotomicro/ego-component/egorm"
-	"github.com/gotomicro/ego-component/eredis"
 	"github.com/gotomicro/ego/core/elog"
 )
 

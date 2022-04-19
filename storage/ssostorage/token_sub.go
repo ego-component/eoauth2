@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ego-component/eoauth2/server/model"
-	"github.com/gotomicro/ego-component/eredis"
+	"github.com/ego-component/eredis"
 	"github.com/spf13/cast"
 )
 
