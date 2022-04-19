@@ -121,8 +121,12 @@ github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFP
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
 github.com/ego-component/egorm v1.0.1-0.20220419102658-330602602866 h1:0izCEMJZVwhJDbKv9HEn0zVXmgnydkttZsV/hxt5Lec=
 github.com/ego-component/egorm v1.0.1-0.20220419102658-330602602866/go.mod h1:bva0ombcwDg3d1U8n2KN042WyiYWjPfLwixQUAAbPDk=
+github.com/ego-component/egorm v1.0.1 h1:vFVhsJSscHeh+4Ovnoa2lTXM9xvyMybILEqjQonYpZs=
+github.com/ego-component/egorm v1.0.1/go.mod h1:9dMoSYih51PGJDUrFn1PkapbiwECi1aci8TkFxpH880=
 github.com/ego-component/eredis v1.0.1-0.20220419103035-627b31da0636 h1:NIc0sh4Pb8MO4FWMt22ByB0B1fizJuFf2FuOtVoZEEA=
 github.com/ego-component/eredis v1.0.1-0.20220419103035-627b31da0636/go.mod h1:fABh5TfljZZ+8yH/R1zHGEVQoPa+Bkn8xNEUar8sbCI=
+github.com/ego-component/eredis v1.0.1 h1:JaQaIlGOdmu2+wMLWYk/pEC42KCcDnQxiHFNxcbGLpE=
+github.com/ego-component/eredis v1.0.1/go.mod h1:C05ezVCtJoLW654dtKkJ/p7awK4O6vPSv5e5GU7JLfA=
 github.com/envoyproxy/go-control-plane v0.6.9/go.mod h1:SBwIajubJHhxtWwsL9s8ss4safvEdbitLhGGK48rN6g=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
@@ -265,6 +269,8 @@ github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0U
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/gotomicro/ego v1.0.0 h1:2v7im+ovFMyZDGCG90+fQb8wXySA9fbZGHw3VnCActU=
 github.com/gotomicro/ego v1.0.0/go.mod h1:Pjt+5kIVGMqzpKYMxeN4s/Dc2TrNO9R58yQwt9zoXck=
+github.com/gotomicro/ego v1.0.1 h1:TId194gdnP43RNwh4xBU/MC8Tc6R8nJ5v3BZtf6movE=
+github.com/gotomicro/ego v1.0.1/go.mod h1:Pjt+5kIVGMqzpKYMxeN4s/Dc2TrNO9R58yQwt9zoXck=
 github.com/gotomicro/logrotate v0.0.0-20211108024517-45d1f9a03ff5 h1:y9nw0S0zlla/SBt1GGaTNNCF+781epJ62MntVVbekqQ=
 github.com/gotomicro/logrotate v0.0.0-20211108024517-45d1f9a03ff5/go.mod h1:jKlh8i9m79fE8HAO28kYLN70l87bb7olTLuX/Blex/U=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=

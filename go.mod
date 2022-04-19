@@ -3,11 +3,11 @@ module github.com/ego-component/eoauth2
 go 1.17
 
 require (
-	github.com/ego-component/egorm v1.0.1-0.20220419102658-330602602866
-	github.com/ego-component/eredis v1.0.1-0.20220419103035-627b31da0636
+	github.com/ego-component/egorm v1.0.1
+	github.com/ego-component/eredis v1.0.1
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-redis/redis/v8 v8.11.4
-	github.com/gotomicro/ego v1.0.0
+	github.com/gotomicro/ego v1.0.1
 	github.com/pborman/uuid v1.2.1
 	github.com/spf13/cast v1.3.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
