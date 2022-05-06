@@ -27,7 +27,7 @@ func newUidMapParentToken(config *config, redis *eredis.Component) *userToken {
 		redis:               redis,
 		fieldCtime:          "_ct",  // expire time List
 		fieldExpireTimeList: "_etl", // expire time List
-		fieldClient:         "_c",   // ClientInfo 存储的parent token
+		fieldClient:         "_c:",   // ClientInfo 存储的parent token
 
 	}
 }
