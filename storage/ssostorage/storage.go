@@ -8,6 +8,7 @@ import (
 
 	"github.com/ego-component/egorm"
 	"github.com/ego-component/eoauth2/server"
+	"github.com/ego-component/eoauth2/storage/dao"
 	"github.com/ego-component/eredis"
 	"github.com/go-redis/redis/v8"
 	"github.com/gotomicro/ego/core/elog"
@@ -53,9 +54,27 @@ func (s *Storage) GetClient(ctx context.Context, clientId string) (c server.Clie
 		return
 	}
 
+	// redis没查到，去数据库里查下
 	if errors.Is(err, redis.Nil) {
-		err = fmt.Errorf("redis not found,err: %w", server.ErrNotFound)
-		return
+		appInfo, err := dao.GetAppInfoByClientId(s.db.WithContext(ctx), clientId)
+		if err != nil {
+			return nil, fmt.Errorf("sso storage GetClient get mysql info failed,"+err.Error()+", err: %w", server.ErrNotFound)
+		}
+		client := &ClientInfo{
+			ClientId:    appInfo.ClientId,
+			Secret:      appInfo.Secret,
+			RedirectUri: appInfo.RedirectUri,
+		}
+		err = s.redis.HSet(ctx, s.config.storeClientInfoKey, clientId, client.Marshal())
+		if err != nil {
+			return nil, fmt.Errorf("storage not found,"+err.Error()+",err: %w", server.ErrNotFound)
+		}
+		info := server.DefaultClient{
+			Id:          client.ClientId,
+			Secret:      client.Secret,
+			RedirectUri: client.RedirectUri,
+		}
+		return &info, nil
 	}
 
 	client := &ClientInfo{}

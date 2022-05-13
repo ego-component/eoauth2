@@ -247,7 +247,7 @@ func (ar *AccessRequest) handleRefreshTokenRequest(ctx context.Context, param Ac
 // storage. Sets an error on the response if auth fails or a server error occurs.
 func (ar *AccessRequest) getClient(ctx context.Context, auth *BasicAuth) Client {
 	client, err := ar.config.storage.GetClient(ctx, auth.Username)
-	if err == ErrNotFound {
+	if errors.Is(err, ErrNotFound) {
 		ar.setError(E_UNAUTHORIZED_CLIENT, nil, "getClient", "not found")
 		return nil
 	}
