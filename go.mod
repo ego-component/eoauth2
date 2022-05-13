@@ -7,14 +7,14 @@ require (
 	github.com/ego-component/eredis v1.0.1
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-redis/redis/v8 v8.11.4
-	github.com/gotomicro/ego v1.0.1
+	github.com/gotomicro/ego v1.1.0
 	github.com/pborman/uuid v1.2.1
 	github.com/spf13/cast v1.3.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/zap v1.17.0
-	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
-	google.golang.org/grpc v1.44.0
-	google.golang.org/protobuf v1.27.1
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
+	google.golang.org/grpc v1.45.0
+	google.golang.org/protobuf v1.28.0
 	gorm.io/gorm v1.22.5
 )
 
@@ -25,6 +25,7 @@ require (
 	github.com/alibaba/sentinel-golang v1.0.3 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20220209173558-ad29539cd2e9 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -33,7 +34,7 @@ require (
 	github.com/felixge/fgprof v0.9.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-logr/logr v1.2.2 // indirect
+	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
@@ -48,6 +49,7 @@ require (
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/gotomicro/logrotate v0.0.0-20211108024517-45d1f9a03ff5 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.10.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -77,10 +79,14 @@ require (
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/ugorji/go/codec v1.2.6 // indirect
-	go.opentelemetry.io/otel v1.4.1 // indirect
-	go.opentelemetry.io/otel/exporters/jaeger v1.4.1 // indirect
-	go.opentelemetry.io/otel/sdk v1.4.1 // indirect
-	go.opentelemetry.io/otel/trace v1.4.1 // indirect
+	go.opentelemetry.io/otel v1.6.3 // indirect
+	go.opentelemetry.io/otel/exporters/jaeger v1.6.3 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.6.3 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.6.3 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.6.3 // indirect
+	go.opentelemetry.io/otel/sdk v1.6.3 // indirect
+	go.opentelemetry.io/otel/trace v1.6.3 // indirect
+	go.opentelemetry.io/proto/otlp v0.15.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/automaxprocs v1.3.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
