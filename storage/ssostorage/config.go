@@ -7,7 +7,7 @@ type config struct {
 			key: sso:uid:{uid}
 			expiration: 最大的过期时间
 			value:
-				expireList:      [{"_c:parentToken","ctime"}]
+				expireList:      [{"_c:parentToken","platform","ctime"}]
 				{_ct}：           存储 user 创建时间
 				{_c:parentToken}: parentTokenJsonInfo
 				{_c:parentToken}: parentTokenJsonInfo
