@@ -26,7 +26,7 @@ func initTokenServer(config *config, uidMapParentToken *userToken, parentToken *
 // createParentToken sso的父节点token
 func (t *tokenServer) createParentToken(ctx context.Context, ssoData model.ParentToken) (err error) {
 	// 1 设置uid 到 parent token关系
-	err = t.uidMapParentToken.setToken(ctx, ssoData.Uid, ssoData.Token)
+	err = t.uidMapParentToken.setToken(ctx, ssoData.Uid, ssoData)
 	if err != nil {
 		return fmt.Errorf("token.createParentToken: create token map failed, err:%w", err)
 	}

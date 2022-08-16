@@ -27,7 +27,7 @@ func newUidMapParentToken(config *config, redis *eredis.Component) *userToken {
 		redis:               redis,
 		fieldCtime:          "_ct",  // expire time List
 		fieldExpireTimeList: "_etl", // expire time List
-		fieldClient:         "_c:",   // ClientInfo 存储的parent token
+		fieldClient:         "_c:",  // ClientInfo 存储的parent token
 
 	}
 }
@@ -44,8 +44,8 @@ func (u *userToken) getFieldKey(parentToken string) string {
 // 1 先取出这个key里面的数据
 //   expireTimeList:            [{"clientType1|parentToken":"expire的时间戳"}]
 //	 expireTime:                最大过期时间
-func (u *userToken) setToken(ctx context.Context, uid int64, pToken model.Token) error {
-	fieldKey := u.getFieldKey(pToken.Token)
+func (u *userToken) setToken(ctx context.Context, uid int64, pToken model.ParentToken) error {
+	fieldKey := u.getFieldKey(pToken.Token.Token)
 	var flagCreate bool
 	expireTime, err := u.getExpireTime(ctx, uid)
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -68,7 +68,8 @@ func (u *userToken) setToken(ctx context.Context, uid int64, pToken model.Token)
 	// 新数据添加到队列前面，这样方便后续清除数据，或者对数据做一些限制
 	newExpireTimeList = append(newExpireTimeList, UserTokenExpire{
 		Field:      fieldKey,
-		ExpireTime: nowTime + pToken.ExpiresIn,
+		Platform:   pToken.StoreData.Platform,
+		ExpireTime: nowTime + pToken.Token.ExpiresIn,
 	})
 
 	// 删除过期的数据
@@ -94,20 +95,20 @@ func (u *userToken) setToken(ctx context.Context, uid int64, pToken model.Token)
 	}
 
 	// 将parent token信息存入
-	pTokenByte, err := pToken.Marshal()
+	pTokenByte, err := pToken.Token.Marshal()
 	if err != nil {
 		return fmt.Errorf("userToken.createToken failed, err: %w", err)
 	}
 
-	err = u.redis.HSet(ctx, u.getKey(uid), u.getFieldKey(pToken.Token), pTokenByte)
+	err = u.redis.HSet(ctx, u.getKey(uid), u.getFieldKey(pToken.Token.Token), pTokenByte)
 	if err != nil {
 		return fmt.Errorf("userToken setToken HSet token info failed, error: %w", err)
 	}
 
 	// 如果之前没数据，那么expireTime为0，所以会写入
 	// 新的token大于，之前的过期时间，所以需要续期
-	if pToken.ExpiresIn > expireTime {
-		err = u.redis.Client().Expire(ctx, u.getKey(uid), time.Duration(pToken.ExpiresIn)*time.Second).Err()
+	if pToken.Token.ExpiresIn > expireTime {
+		err = u.redis.Client().Expire(ctx, u.getKey(uid), time.Duration(pToken.Token.ExpiresIn)*time.Second).Err()
 		if err != nil {
 			return fmt.Errorf("userToken setToken expire error %w", err)
 		}

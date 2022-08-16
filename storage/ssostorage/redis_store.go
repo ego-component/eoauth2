@@ -7,6 +7,7 @@ import (
 // UserTokenExpire 用户Uid里parent token存储的一些信息
 type UserTokenExpire struct {
 	Field      string `msgpack:"f" json:"field"`
+	Platform   string `msgpack:"p" json:"platform"`
 	ExpireTime int64  `msgpack:"et" json:"expireTime"`
 }
 
