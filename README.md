@@ -1,5 +1,4 @@
 # eoauth2 组件使用指南
-# ek8s 组件使用指南
 [![goproxy.cn](https://goproxy.cn/stats/github.com/ego-component/eoauth2/badges/download-count.svg)](https://goproxy.cn/stats/github.com/ego-component/eoauth2)
 [![Release](https://img.shields.io/github/v/release/ego-component/eoauth2.svg?style=flat-square)](https://github.com/ego-component/eoauth2)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
